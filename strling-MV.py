@@ -14,14 +14,14 @@ def get_args():
     """Incorporating argparse into the code for interchangeable arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--outliers",
+    ### strling output goes here as input
         help="input outlier name")
     parser.add_argument("--ped",
         help="input ped file")
-	### out will just be the name of my output file... turn up
+    ### ped file to sort trios
     parser.add_argument("--out",
         help="outputfile")
-    parser.add_argument("--depth", type=int, default=15,
-        help="depth filter")
+    ### out will just be the name of my output file... turn up
     parser.add_argument("--wiggle", default=10,
         help="depth filter")
     return parser.parse_args()
@@ -37,6 +37,8 @@ def wiggle(wigglecommand):
             return wigglestr
 
 def allele_check(allele1,allele2):
+    ### we want to standardize our alleles, so we evaluate them first thing
+    ### max size is 350 since that's about what strling can read
     if np.all((allele1 == 'NaN') & (allele2 == 'NaN')):
         allele1 == 'NaN'
     elif np.all((allele1 != 'NaN') & (allele2 == 'NaN')):
@@ -45,6 +47,7 @@ def allele_check(allele1,allele2):
             allele1 = 350
         else:
             allele2 = allele1
+    ### if we have a corresponding allele to 'NaN', we match it
     elif np.all((allele1 == 'NaN') & (allele2 != 'NaN')):
         if (allele2 >= 350):
             allele1 = 350
@@ -63,6 +66,7 @@ def allele_check(allele1,allele2):
 def allele_range(wigglecommand, allele1, allele2):
     if np.all((allele1 == 'NaN') & (allele2 == 'NaN')):
       return
+      ###disregard alleles where there's no info
     else:
         tple1 = (allele1 - wiggle(wigglecommand), allele1 + wiggle(wigglecommand))
         tple2 = (allele2 - wiggle(wigglecommand), allele2 + wiggle(wigglecommand))
@@ -152,8 +156,7 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
     dfkid = dfkid.rename(columns={"allele1_est":"allele1kid", "allele2_est":"allele2kid", "depth": "depth_kid"})
     dfdad = dfdad.rename(columns={"allele1_est":"allele1dad", "allele2_est":"allele2dad", "depth": "depth_dad"})
     dfmom = dfmom.rename(columns={"allele1_est":"allele1mom", "allele2_est":"allele2mom","depth": "depth_mom"})
-    ### since we know that all of the alleles are composite, we rename them to tell apart the trio members
-
+    ### since we are comparing alleles from kid to parents, we need to distinguish the alleles in the final combined df
     drop_from_dkid= ['spanning_reads', 'spanning_pairs', 'left_clips', 'right_clips', 'unplaced_pairs', 'sum_str_counts', 'sum_str_log', 'outlier']
     drop_from_parents = ['left', 'right', 'chrom', 'chrom_path', 'right_path', 'left_path', 'disease', 'repeatunit_path', 'overlap', 'sample', 'p', 'p_adj', 'repeatunit'] + drop_from_dkid
     not_in_df = []
