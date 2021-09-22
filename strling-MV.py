@@ -39,8 +39,9 @@ def wiggle(wigglecommand):
 def allele_check(allele1,allele2):
     ### we want to standardize our alleles, so we evaluate them first thing
     ### max size is 350 since that's about what strling can read
-    if np.all((allele1 == 'NaN') & (allele2 == 'NaN')):
+    if np.all(allele1 == 'NaN') & (allele2 == 'NaN'):
         allele1 == 'NaN'
+        print('still NaN')
     elif np.all((allele1 != 'NaN') & (allele2 == 'NaN')):
         if (allele1 >= 350):
             allele2 = 350
@@ -65,7 +66,7 @@ def allele_check(allele1,allele2):
 
 def allele_range(wigglecommand, allele1, allele2):
     if np.all((allele1 == 'NaN') & (allele2 == 'NaN')):
-      return
+      return ('NaN','NaN'), ('NaN','NaN')
       ###disregard alleles where there's no info
     else:
         tple1 = (allele1 - wiggle(wigglecommand), allele1 + wiggle(wigglecommand))
@@ -75,7 +76,7 @@ def allele_range(wigglecommand, allele1, allele2):
 def get_allele_ranges(wigglecommand, allele1, allele2):
     a, b = allele_check(allele1,allele2)
     if np.all((a == 'NaN') & (b == 'NaN')):
-        return
+        return ('NaN','NaN'), ('NaN','NaN')
     else:
         x, y =(allele_range(wigglecommand, a, b))
         return x, y
@@ -111,11 +112,12 @@ def check_range(wigglecommand, allele1, allele2, kidallele):
         return 'Deletion'
 
 def full_allele_check(wgl, momalleledict, dadalleledict,kidalleledict):
-    if np.all((kidalleledict['allele1'] == 'NaN') & (kidalleledict['allele2'] == 'NaN')):
+    print(kidalleledict)
+    if np.all((kidalleledict['allele1'] != type(int)) & (kidalleledict['allele2'] != type(int))):
         return 'Missing alleles,ignore'
-    elif np.all((momalleledict['allele1'] == 'NaN') & (momalleledict['allele2'] == 'NaN')):
+    elif np.all((momalleledict['allele1'] != type(int)) & (momalleledict['allele2'] != type(int))):
         return 'Missing alleles,ignore'
-    elif np.all((dadalleledict['allele1'] == 'NaN') & (dadalleledict['allele2'] == 'NaN')):
+    elif np.all((dadalleledict['allele1'] != type(int)) & (dadalleledict['allele2'] != type(int))):
         return 'Missing alleles,ignore'
     else:
         if check_range(wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele1']) is True:
@@ -192,7 +194,11 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
             "allele2": row["allele2dad"]
         }
         wgl = wiggle(args.wiggle)
-        row['mendelianstatus'] = full_allele_check(wgl,momalleledict,dadalleledict,kidalleledict)
+        if kidalleledict == {'nan','nan'} or momalleledict == {'nan', 'nan'} or dadalleledict == {'nan', 'nan'}:
+            row['mendelianstatus'] = 'Missing alleles, please  ignore'
+            print('come on now yall')
+        else:
+            row['mendelianstatus'] = full_allele_check(wgl,momalleledict,dadalleledict,kidalleledict)
         kiddadmom.at[index,'mendelianstatus'] = row['mendelianstatus']
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
