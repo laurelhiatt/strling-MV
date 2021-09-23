@@ -25,19 +25,22 @@ def get_args():
     parser.add_argument("--out",
         help="outputfile")
     ### out will just be the name of my output file... turn up
-    parser.add_argument("--wiggle", default=10,
+    parser.add_argument("--wiggle", default=0.1,
         help="establishes the ranges we are setting for the alleles")
+    parser.add_argument("--depth", type=int, default=15,
+        help="depth filter")
     return parser.parse_args()
 
 
-def wiggle(wigglecommand):
-        if type(wigglecommand) is int:
-            wiggleint = wigglecommand
-            return wiggleint
-        else:
-            type(wigglecommand) is str
-            wigglestr = int(wigglecommand)
-            return wigglestr
+def wiggle(allele,wgl):
+    if float(wgl) > 1:
+        return 'error'
+        ### this is a percentage, so to be greater than 1 is not the goal
+    else:
+        (a,b) = ((float(allele))*(1-float(wgl)),(float(allele))*(1+float(wgl)))
+        ### generating the range of alleles
+    print(a,b)
+    return (a,b)
 
 def allele_check(allele1,allele2):
     ### we want to standardize our alleles, so we evaluate them first thing
@@ -69,18 +72,18 @@ def allele_check(allele1,allele2):
         allele2 = allele2
     return allele1, allele2
 
-def allele_range(wigglecommand, allele1, allele2):
-    tple1 = (allele1 - wiggle(wigglecommand), allele1 + wiggle(wigglecommand))
-    tple2 = (allele2 - wiggle(wigglecommand), allele2 + wiggle(wigglecommand))
+def allele_range(allele1, allele2, wgl):
+    tple1 = wiggle(allele1,wgl)
+    tple2 = wiggle(allele2,wgl)
     return tple1, tple2
 
-def get_allele_ranges(wigglecommand, allele1, allele2):
+def get_allele_ranges(wgl, allele1, allele2):
     a, b = allele_check(allele1,allele2)
-    x, y = (allele_range(wigglecommand, a, b))
+    x, y = (allele_range(a, b, wgl))
     return x, y
 
-def check_range(wigglecommand, allele1, allele2, kidallele):
-    x,y = get_allele_ranges(wigglecommand, allele1, allele2)
+def check_range(wgl, allele1, allele2, kidallele):
+    x,y = get_allele_ranges(wgl, allele1, allele2)
     a,b = x
     c,d = y
     if np.all(kidallele < 350.0):
@@ -183,9 +186,11 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
             "allele1": row["allele1dad"],
             "allele2": row["allele2dad"]
         }
-        wgl = wiggle(args.wiggle)
-        row['mendelianstatus'] = full_allele_check(wgl,momalleledict,dadalleledict,kidalleledict)
+        if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'] >= args.depth) & (row['depth_dad'] >= args.depth)):
+            row['mendelianstatus'] = full_allele_check(args.wiggle,momalleledict,dadalleledict,kidalleledict)
+        else: row['mendelianstatus'] = 'does not meet depth filter'
         kiddadmom.at[index,'mendelianstatus'] = row['mendelianstatus']
+        kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'does not meet depth filter']
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
         writeHeader = False
