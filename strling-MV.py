@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import peddy ### must be in python version 3.7 for peddy to actually work
 import math
+### these are the necessary modules for this code
 
+### we are now going to define a bunch of functions, hurray!
 def has_parents(sample):
     """Check if Peddy sample has both parents in ped file"""
     if sample.mom is not None and sample.dad is not None:
@@ -24,7 +26,7 @@ def get_args():
         help="outputfile")
     ### out will just be the name of my output file... turn up
     parser.add_argument("--wiggle", default=10,
-        help="depth filter")
+        help="establishes the ranges we are setting for the alleles")
     return parser.parse_args()
 
 
@@ -39,71 +41,63 @@ def wiggle(wigglecommand):
 
 def allele_check(allele1,allele2):
     ### we want to standardize our alleles, so we evaluate them first thing
-    ### max size is 350 since that's about what strling can read
-    if np.all(allele1 == 'NaN') & (allele2 == 'NaN'):
-        allele1 == 'NaN'
-        print('still NaN')
-    elif np.all((allele1 != 'NaN') & (allele2 == 'NaN')):
-        if (allele1 >= 350):
-            allele2 = 350
-            allele1 = 350
+    ### max size is 350.0 since that's about what strling can read
+    if np.all((isinstance(allele1, float)) & (math.isnan(allele2))):
+        if (allele1 >= 350.0):
+            allele2 = 350.0
+            allele1 = 350.0
         else:
             allele2 = allele1
-    ### if we have a corresponding allele to 'NaN', we match it
-    elif np.all((allele1 == 'NaN') & (allele2 != 'NaN')):
-        if (allele2 >= 350):
-            allele1 = 350
-            allele2 = 350
+    elif np.all((math.isnan(allele1) & (isinstance(allele2, float)))):
+        if (allele2 >= 350.0):
+            allele1 = 350.0
+            allele2 = 350.0
         else:
             allele1 = allele2
-    elif np.all(allele2 >= 350):
-        allele2 = 350
-    elif np.all(allele1 >= 350):
-        allele1 = 350
+        ### if we have only 1 number,  then NaN is set as the other  term
+    elif np.all(allele2 >= 350.0):
+            if np.all(allele1 >= 350.0):
+                allele2 = 350.0
+                allele1 = 350.0
+            else:
+                allele2 = 350.0
+    elif np.all(allele1 >= 350.0):
+        allele1 = 350.0
+        allele2 = 350.0
     else:
         allele1 = allele1
         allele2 = allele2
     return allele1, allele2
 
 def allele_range(wigglecommand, allele1, allele2):
-    if np.all((allele1 == 'NaN') & (allele2 == 'NaN')):
-      return ('NaN','NaN'), ('NaN','NaN')
-      ###disregard alleles where there's no info
-    else:
-        tple1 = (allele1 - wiggle(wigglecommand), allele1 + wiggle(wigglecommand))
-        tple2 = (allele2 - wiggle(wigglecommand), allele2 + wiggle(wigglecommand))
+    tple1 = (allele1 - wiggle(wigglecommand), allele1 + wiggle(wigglecommand))
+    tple2 = (allele2 - wiggle(wigglecommand), allele2 + wiggle(wigglecommand))
     return tple1, tple2
 
 def get_allele_ranges(wigglecommand, allele1, allele2):
     a, b = allele_check(allele1,allele2)
-    if np.all((a == 'NaN') & (b == 'NaN')):
-        return ('NaN','NaN'), ('NaN','NaN')
-    else:
-        x, y =(allele_range(wigglecommand, a, b))
-        return x, y
+    x, y = (allele_range(wigglecommand, a, b))
+    return x, y
 
 def check_range(wigglecommand, allele1, allele2, kidallele):
-    if get_allele_ranges(wigglecommand, allele1, allele2) is None:
-        return None
-    else:
-        x,y = get_allele_ranges(wigglecommand, allele1, allele2)
-        a,b = x
-        c,d = y
-    if np.all(kidallele < 350):
+    x,y = get_allele_ranges(wigglecommand, allele1, allele2)
+    a,b = x
+    c,d = y
+    if np.all(kidallele < 350.0):
         if (a <= kidallele <= b) | (c <= kidallele <= d):
             return True
         if kidallele > a and b and c and d:
             return 'Amplification'
         else:
             return 'Deletion'
-    elif np.all((kidallele >= 350)):
-            if (a>=350):
+    elif np.all((kidallele >= 350.0)):
+            if (a>=350.0):
                 return True
-            elif (b>=350):
+            elif (b>=350.0):
                 return True
-            elif (c>=350):
+            elif (c>=350.0):
                 return True
-            elif (d>=350):
+            elif (d>=350.0):
                 return True
             else:
                 return 'Amplification'
@@ -198,14 +192,14 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
     else:
         kiddadmom.to_csv(args.out, mode='a',sep='\t', header=False, index=False)
     ### We get a true/false count per trio. Neat!
+    if hasattr(kiddadmom,  'mendelianstatus'):
+        print(kiddadmom.mendelianstatus.value_counts(), kid)
+    else:
+        pass
     my_small_df = (kiddadmom, 'Kid, mom, and dad sample IDs are', kid, mom, dad)
-	### I just kinda like this dataframe, not super useful but yeah
-
-    ###kiddadmom.to_csv(args.out, mode = 'a', sep='\t', header = write_header, index = False)
-    ###print(mendelianstatus, kid) ### to summarize expansions and list the child of trio per dataset
     return my_small_df ### if I want the dataframe as an object, although it is saved to the composite file
 
-def main():    ###match below or else
+def main():
     args = get_args()
     df = pd.read_table(args.outliers, delim_whitespace = True, dtype = {'sample' : str}, index_col = False)
     ped = peddy.Ped(args.ped, 'Paternal_ID' == str, ) ### import the ped file through a peddy function
