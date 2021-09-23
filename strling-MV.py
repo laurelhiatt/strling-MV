@@ -27,19 +27,21 @@ def get_args():
     ### out will just be the name of my output file... turn up
     parser.add_argument("--wiggle", default=0.1,
         help="establishes the ranges we are setting for the alleles")
+    parser.add_argument("--minwig", default=10.0,
+        help="minimum wiggle for small alleles")
     parser.add_argument("--depth", type=int, default=15,
         help="depth filter")
     return parser.parse_args()
 
-
-def wiggle(allele,wgl):
+def wiggle(allele,wgl,minwig):
     if float(wgl) > 1:
         return 'error'
         ### this is a percentage, so to be greater than 1 is not the goal
+    elif allele*1 < minwig:
+         (a,b) = (allele-minwig,allele+minwig)
     else:
-        (a,b) = ((float(allele))*(1-float(wgl)),(float(allele))*(1+float(wgl)))
+         (a,b) = ((float(allele))*(1-float(wgl)),(float(allele))*(1+float(wgl)))
         ### generating the range of alleles
-    print(a,b)
     return (a,b)
 
 def allele_check(allele1,allele2):
@@ -72,18 +74,18 @@ def allele_check(allele1,allele2):
         allele2 = allele2
     return allele1, allele2
 
-def allele_range(allele1, allele2, wgl):
-    tple1 = wiggle(allele1,wgl)
-    tple2 = wiggle(allele2,wgl)
+def allele_range(allele1, allele2, wgl, minwig):
+    tple1 = wiggle(allele1,wgl,minwig)
+    tple2 = wiggle(allele2,wgl, minwig)
     return tple1, tple2
 
-def get_allele_ranges(wgl, allele1, allele2):
+def get_allele_ranges(minwig, wgl, allele1, allele2):
     a, b = allele_check(allele1,allele2)
-    x, y = (allele_range(a, b, wgl))
+    x, y = (allele_range(a, b, wgl, minwig))
     return x, y
 
-def check_range(wgl, allele1, allele2, kidallele):
-    x,y = get_allele_ranges(wgl, allele1, allele2)
+def check_range(minwig, wgl, allele1, allele2, kidallele):
+    x,y = get_allele_ranges(minwig, wgl, allele1, allele2)
     a,b = x
     c,d = y
     if np.all(kidallele < 350.0):
@@ -109,26 +111,26 @@ def check_range(wgl, allele1, allele2, kidallele):
     else:
         return 'Deletion'
 
-def full_allele_check(wgl, momalleledict, dadalleledict,kidalleledict):
+def full_allele_check(minwig, wgl, momalleledict, dadalleledict,kidalleledict):
     if (math.isnan(kidalleledict['allele1']) & math.isnan(kidalleledict['allele2'])) or (math.isnan(momalleledict['allele1']) & math.isnan(momalleledict['allele2'])) or (math.isnan(dadalleledict['allele1']) & math.isnan(dadalleledict['allele2'])):
         return 'Missing alleles,ignore'
     else:
-        if check_range(wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele1']) is True:
-            if check_range(wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele2']) is True:
+        if check_range(minwig, wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele1']) is True:
+            if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele2']) is True:
                 return 'Full match'
             else:
                 return 'MV'
         else:
-            if check_range(wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele2']) is True:
-                if check_range(wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele1']) is True:
+            if check_range(minwig, wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele2']) is True:
+                if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele1']) is True:
                     return "Full match"
                 else:
                     return 'MV'
             else:
-                if check_range(wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele1']) is True:
+                if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele1']) is True:
                     return 'MV'
                 else:
-                    if check_range(wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele2']) is True:
+                    if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele2']) is True:
                         return 'MV'
                     else:
                         return 'Double MV, likely error'
@@ -187,7 +189,7 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
             "allele2": row["allele2dad"]
         }
         if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'] >= args.depth) & (row['depth_dad'] >= args.depth)):
-            row['mendelianstatus'] = full_allele_check(args.wiggle,momalleledict,dadalleledict,kidalleledict)
+            row['mendelianstatus'] = full_allele_check(args.minwig, args.wiggle,momalleledict,dadalleledict,kidalleledict)
         else: row['mendelianstatus'] = 'does not meet depth filter'
         kiddadmom.at[index,'mendelianstatus'] = row['mendelianstatus']
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'does not meet depth filter']
