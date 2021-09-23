@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import peddy ### must be in python version 3.7 for peddy to actually work
+import math
 
 def has_parents(sample):
     """Check if Peddy sample has both parents in ped file"""
@@ -112,12 +113,7 @@ def check_range(wigglecommand, allele1, allele2, kidallele):
         return 'Deletion'
 
 def full_allele_check(wgl, momalleledict, dadalleledict,kidalleledict):
-    print(kidalleledict)
-    if np.all((kidalleledict['allele1'] != type(int)) & (kidalleledict['allele2'] != type(int))):
-        return 'Missing alleles,ignore'
-    elif np.all((momalleledict['allele1'] != type(int)) & (momalleledict['allele2'] != type(int))):
-        return 'Missing alleles,ignore'
-    elif np.all((dadalleledict['allele1'] != type(int)) & (dadalleledict['allele2'] != type(int))):
+    if (math.isnan(kidalleledict['allele1']) & math.isnan(kidalleledict['allele2'])) or (math.isnan(momalleledict['allele1']) & math.isnan(momalleledict['allele2'])) or (math.isnan(dadalleledict['allele1']) & math.isnan(dadalleledict['allele2'])):
         return 'Missing alleles,ignore'
     else:
         if check_range(wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele1']) is True:
@@ -194,11 +190,7 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
             "allele2": row["allele2dad"]
         }
         wgl = wiggle(args.wiggle)
-        if kidalleledict == {'nan','nan'} or momalleledict == {'nan', 'nan'} or dadalleledict == {'nan', 'nan'}:
-            row['mendelianstatus'] = 'Missing alleles, please  ignore'
-            print('come on now yall')
-        else:
-            row['mendelianstatus'] = full_allele_check(wgl,momalleledict,dadalleledict,kidalleledict)
+        row['mendelianstatus'] = full_allele_check(wgl,momalleledict,dadalleledict,kidalleledict)
         kiddadmom.at[index,'mendelianstatus'] = row['mendelianstatus']
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
