@@ -3,7 +3,7 @@ import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
 import peddy ### must be in python version 3.7 for peddy to actually work
-import math
+from math import isnan
 ### these are the necessary modules for this code
 
 ### we are now going to define a bunch of functions, hurray!
@@ -53,13 +53,13 @@ def wiggle(allele,wgl,minwig):
 def allele_check(allele1,allele2):
     ### we want to standardize our alleles based on biological/computational factors, so we evaluate them first thing
     ### max size is 350.0 since that's about what strling can estimate up to
-    if np.all((isinstance(allele1, float)) & (math.isnan(allele2))):
+    if np.all((isinstance(allele1, float)) & (isnan(allele2))):
         if (allele1 >= 350.0):
             allele2 = 350.0
             allele1 = 350.0
         else:
             allele2 = allele1
-    elif np.all((math.isnan(allele1) & (isinstance(allele2, float)))):
+    elif np.all((isnan(allele1) & (isinstance(allele2, float)))):
         if (allele2 >= 350.0):
             allele1 = 350.0
             allele2 = 350.0
@@ -123,7 +123,7 @@ def check_range(minwig, wgl, allele1, allele2, kidallele):
         ### ASK HARRIET ABOUT THIS
 
 def full_allele_check(minwig, wgl, momalleledict, dadalleledict,kidalleledict):
-    if (math.isnan(kidalleledict['allele1']) & math.isnan(kidalleledict['allele2'])) or (math.isnan(momalleledict['allele1']) & math.isnan(momalleledict['allele2'])) or (math.isnan(dadalleledict['allele1']) & math.isnan(dadalleledict['allele2'])):
+    if (isnan(kidalleledict['allele1']) & isnan(kidalleledict['allele2'])) or (isnan(momalleledict['allele1']) & isnan(momalleledict['allele2'])) or (isnan(dadalleledict['allele1']) & isnan(dadalleledict['allele2'])):
         return 'Missing alleles,ignore'
         ### if any of the trio has both missing alleles, then we are out of there
     else:
