@@ -1,5 +1,6 @@
 import argparse
 import pandas as pd
+pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
 import peddy ### must be in python version 3.7 for peddy to actually work
 import math
@@ -31,6 +32,9 @@ def get_args():
         help="minimum wiggle for small alleles")
     parser.add_argument("--depth", type=int, default=15,
         help="depth filter")
+    parser.add_argument("--ampsize", type=int, default=150,
+        help="amplification size filter")
+        ### size of de novo expansion, or difference from kid to mom and dad allele sizes, is defaulted to 150bp
     return parser.parse_args()
 
 def wiggle(allele,wgl,minwig):
@@ -193,6 +197,14 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
         else: row['mendelianstatus'] = 'does not meet depth filter'
         kiddadmom.at[index,'mendelianstatus'] = row['mendelianstatus']
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'does not meet depth filter']
+        kiddadmom["allelecompkid"] = kiddadmom[["allele1kid", "allele2kid"]].max(axis=1)
+        kiddadmom['allelecompkid'] = kiddadmom['allelecompkid'].replace(np.nan, 0)
+        kiddadmom["allelecompmom"] = kiddadmom[["allele1mom", "allele2mom"]].max(axis=1)
+        kiddadmom['allelecompmom'] = kiddadmom['allelecompmom'].replace(np.nan, 0)
+        kiddadmom["allelecompdad"] = kiddadmom[["allele1dad", "allele2dad"]].max(axis=1)
+        kiddadmom['allelecompdad'] = kiddadmom['allelecompdad'].replace(np.nan, 0)
+        kiddadmom['novel_amp'] = (kiddadmom['allelecompkid']-kiddadmom['allelecompdad']>= args.ampsize) & (kiddadmom['allelecompkid']-kiddadmom['allelecompmom']>= args.ampsize)
+        kiddadmom = kiddadmom.drop(columns=['allelecompkid', 'allelecompmom', 'allelecompdad'])
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
         writeHeader = False
@@ -200,7 +212,7 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
         kiddadmom.to_csv(args.out, mode='a',sep='\t', header=False, index=False)
     ### We get a true/false count per trio. Neat!
     if hasattr(kiddadmom,  'mendelianstatus'):
-        print(kiddadmom.mendelianstatus.value_counts(), kid)
+        print(kiddadmom.mendelianstatus.value_counts(),kiddadmom.novel_amp.value_counts(), kid)
     else:
         pass
     my_small_df = (kiddadmom, 'Kid, mom, and dad sample IDs are', kid, mom, dad)
