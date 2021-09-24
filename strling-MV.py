@@ -28,6 +28,7 @@ def get_args():
     ### out will just be the name of my output file... turn up
     parser.add_argument("--wiggle", default=0.1,
         help="establishes the ranges we are setting for the alleles")
+    ### cannot be greater than 1
     parser.add_argument("--minwig", default=10.0,
         help="minimum wiggle for small alleles")
     parser.add_argument("--depth", type=int, default=15,
@@ -43,14 +44,15 @@ def wiggle(allele,wgl,minwig):
         ### this is a percentage, so to be greater than 1 is not the goal
     elif allele*1 < minwig:
          (a,b) = (allele-minwig,allele+minwig)
+         ### for small alleles, wiggle based on percentage isn't feasible, so a minimum wiggle is set
     else:
          (a,b) = ((float(allele))*(1-float(wgl)),(float(allele))*(1+float(wgl)))
         ### generating the range of alleles
     return (a,b)
 
 def allele_check(allele1,allele2):
-    ### we want to standardize our alleles, so we evaluate them first thing
-    ### max size is 350.0 since that's about what strling can read
+    ### we want to standardize our alleles based on biological/computational factors, so we evaluate them first thing
+    ### max size is 350.0 since that's about what strling can estimate up to
     if np.all((isinstance(allele1, float)) & (math.isnan(allele2))):
         if (allele1 >= 350.0):
             allele2 = 350.0
@@ -63,7 +65,7 @@ def allele_check(allele1,allele2):
             allele2 = 350.0
         else:
             allele1 = allele2
-        ### if we have only 1 number,  then NaN is set as the other  term
+        ### if we have only 1 captured allele,  then NaN is set equal to the other alllele
     elif np.all(allele2 >= 350.0):
             if np.all(allele1 >= 350.0):
                 allele2 = 350.0
@@ -82,21 +84,27 @@ def allele_range(allele1, allele2, wgl, minwig):
     tple1 = wiggle(allele1,wgl,minwig)
     tple2 = wiggle(allele2,wgl, minwig)
     return tple1, tple2
+### here we generate the allele ranges with the built in "wiggle" for both alleles and return 2 tuples
 
 def get_allele_ranges(minwig, wgl, allele1, allele2):
     a, b = allele_check(allele1,allele2)
     x, y = (allele_range(a, b, wgl, minwig))
     return x, y
+    ### this may start looking redundant, but this is how we make sure all of our alleles have been "checked" before we generate the ranges
 
 def check_range(minwig, wgl, allele1, allele2, kidallele):
+    ### here we compare a kid allele to the parental alleles, taken from the prior functions
+    ### there are various returned values in case we wish to capture this output later, that can be easily added
     x,y = get_allele_ranges(minwig, wgl, allele1, allele2)
     a,b = x
     c,d = y
     if np.all(kidallele < 350.0):
         if (a <= kidallele <= b) | (c <= kidallele <= d):
             return True
-        if kidallele > a and b and c and d:
+            ### allele match
+        elif kidallele > a and b and c and d:
             return 'Amplification'
+            ### this is also captured later by ampsize but is here for redundancy
         else:
             return 'Deletion'
     elif np.all((kidallele >= 350.0)):
