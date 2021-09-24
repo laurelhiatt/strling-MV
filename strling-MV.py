@@ -107,50 +107,55 @@ def check_range(minwig, wgl, allele1, allele2, kidallele):
             ### this is also captured later by ampsize but is here for redundancy
         else:
             return 'Deletion'
-    elif np.all((kidallele >= 350.0)):
-            if (a>=350.0):
-                return True
-            elif (b>=350.0):
-                return True
-            elif (c>=350.0):
-                return True
-            elif (d>=350.0):
-                return True
-            else:
-                return 'Amplification'
-    elif np.all((kidallele > b) & (kidallele > d)):
-        return 'Amplification'
+        ### if the kidi allele is below the threshold, it should be in range of the parent alleles
     else:
-        return 'Deletion'
+        if (a>=350.0):
+            return True
+        elif (b>=350.0):
+            return True
+        elif (c>=350.0):
+            return True
+        elif (d>=350.0):
+            return True
+        else:
+            return 'Amplification'
+        ### if the kid allele is above the 350bp threshold, and none of the parents are at or above the threshold, it's read as an amplification
+        ### ASK HARRIET ABOUT THIS
 
 def full_allele_check(minwig, wgl, momalleledict, dadalleledict,kidalleledict):
     if (math.isnan(kidalleledict['allele1']) & math.isnan(kidalleledict['allele2'])) or (math.isnan(momalleledict['allele1']) & math.isnan(momalleledict['allele2'])) or (math.isnan(dadalleledict['allele1']) & math.isnan(dadalleledict['allele2'])):
         return 'Missing alleles,ignore'
+        ### if any of the trio has both missing alleles, then we are out of there
     else:
         if check_range(minwig, wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele1']) is True:
             if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele2']) is True:
                 return 'Full match'
+                ### kid allele 1 matches mom, kid allele 2 matches dad, we're golden
             else:
                 return 'MV'
+                ### kiid allele 1 matches mom but kid allele 2 doesn't match dad, Mendelian violation
         else:
             if check_range(minwig, wgl, momalleledict['allele1'],momalleledict['allele2'],kidalleledict['allele2']) is True:
                 if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele1']) is True:
                     return "Full match"
                 else:
                     return 'MV'
+                    ### same as above except allele 2 to mom and allele 1 to dad
             else:
                 if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele1']) is True:
                     return 'MV'
+                    ### allele 1 matches dad but allele 1 but allele 2 doesn't match mom
                 else:
                     if check_range(minwig, wgl, dadalleledict['allele1'],dadalleledict['allele2'],kidalleledict['allele2']) is True:
                         return 'MV'
+                        ### allele 2 matches dad but allele 1 doesn't match mom
                     else:
                         return 'Double MV, likely error'
+                        ### no matches to mom or dad
 
 def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that """
     args = get_args()
-
 
     dfkid = df.loc[df['sample'] == kid] ###match the data frame to the samples of the individual or "kid"
     dfkid['mutation'] = mutation
@@ -165,7 +170,8 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
     dfkid = dfkid.rename(columns={"allele1_est":"allele1kid", "allele2_est":"allele2kid", "depth": "depth_kid"})
     dfdad = dfdad.rename(columns={"allele1_est":"allele1dad", "allele2_est":"allele2dad", "depth": "depth_dad"})
     dfmom = dfmom.rename(columns={"allele1_est":"allele1mom", "allele2_est":"allele2mom","depth": "depth_mom"})
-    ### since we are comparing alleles from kid to parents, we need to distinguish the alleles in the final combined df
+    ### since we are comparing alleles from kid to parents, and using depth for all as a filter, we need to distinguish the alleles in the final combined df
+
     drop_from_dkid= ['spanning_reads', 'spanning_pairs', 'left_clips', 'right_clips', 'unplaced_pairs', 'sum_str_counts', 'sum_str_log', 'outlier']
     drop_from_parents = ['left', 'right', 'chrom', 'chrom_path', 'right_path', 'left_path', 'disease', 'repeatunit_path', 'overlap', 'sample', 'p', 'p_adj', 'repeatunit'] + drop_from_dkid
     not_in_df = []
@@ -185,6 +191,7 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
 	### we are merging the dataframes by locus so we can easily subtract the columns, and have a clean output by locus
 
     for index, row in kiddadmom.iterrows():
+        ### we are going to iterate row by row to create dictionaries of the 2 alleles for kid, mom, and dad
         kidalleledict = {}
         momalleledict = {}
         dadalleledict = {}
@@ -202,39 +209,51 @@ def strlingMV(df,kid,mom,dad, mutation, writeHeader = True):
         }
         if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(args.minwig, args.wiggle,momalleledict,dadalleledict,kidalleledict)
+            ### if we meet the depth filter, we do a full allele check and report the result in a new column
         else: row['mendelianstatus'] = 'does not meet depth filter'
         kiddadmom.at[index,'mendelianstatus'] = row['mendelianstatus']
+        ### we add our new column to the main data frame
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'does not meet depth filter']
+        ### drop any rows that didn't meet the depth filter
+
         kiddadmom["allelecompkid"] = kiddadmom[["allele1kid", "allele2kid"]].max(axis=1)
         kiddadmom['allelecompkid'] = kiddadmom['allelecompkid'].replace(np.nan, 0)
         kiddadmom["allelecompmom"] = kiddadmom[["allele1mom", "allele2mom"]].max(axis=1)
         kiddadmom['allelecompmom'] = kiddadmom['allelecompmom'].replace(np.nan, 0)
         kiddadmom["allelecompdad"] = kiddadmom[["allele1dad", "allele2dad"]].max(axis=1)
         kiddadmom['allelecompdad'] = kiddadmom['allelecompdad'].replace(np.nan, 0)
+        ### we're going to test for amplifiication here based on a bp size, first we're taking the larger allele for both, which is generally allele2 but we're going to be careful regardless
+
         kiddadmom['novel_amp'] = (kiddadmom['allelecompkid']-kiddadmom['allelecompdad']>= args.ampsize) & (kiddadmom['allelecompkid']-kiddadmom['allelecompmom']>= args.ampsize)
+        ### evaluating for novel amplifications based on the amp size cutoff
         kiddadmom = kiddadmom.drop(columns=['allelecompkid', 'allelecompmom', 'allelecompdad'])
+        ### drop the extra columns we don't need them
+
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
         writeHeader = False
     else:
         kiddadmom.to_csv(args.out, mode='a',sep='\t', header=False, index=False)
-    ### We get a true/false count per trio. Neat!
+    ### this is basically an effort to have the header in the output file exactly once
+
     if hasattr(kiddadmom,  'mendelianstatus'):
         print(kiddadmom.mendelianstatus.value_counts(),kiddadmom.novel_amp.value_counts(), kid)
+    ### as we go through kiddadmom by trio and add this column, we can read out the mendelian status counts AND the novel amp counts
     else:
         pass
     my_small_df = (kiddadmom, 'Kid, mom, and dad sample IDs are', kid, mom, dad)
-    return my_small_df ### if I want the dataframe as an object, although it is saved to the composite file
+    return my_small_df ### if I want the dataframe as an object
 
 def main():
     args = get_args()
     df = pd.read_table(args.outliers, delim_whitespace = True, dtype = {'sample' : str}, index_col = False)
-    ped = peddy.Ped(args.ped, 'Paternal_ID' == str, ) ### import the ped file through a peddy function
     ###this is where we input our STRLing outlier data, super exciting!
+    ped = peddy.Ped(args.ped, 'Paternal_ID' == str, ) ### import the ped file through a peddy function
     with open(args.out, 'w') as newfile:
             pass
     writeHeader = True
     for sample in ped.samples():
+        ### we're gonna go through all the samples and evaluate if there is a trio for comparison
         if has_parents(sample):
             if sample.mom.phenotype != '0':
                 mutation = sample.mom.phenotype
@@ -247,11 +266,6 @@ def main():
                 ### this could be a problem...
             strlingMV(df, sample.sample_id, sample.maternal_id,sample.paternal_id, mutation, writeHeader)
             writeHeader = False ###don't want to keep writing header
-    ###kiddadmom.to_csv(args.out, header=kiddadmom.colnames, sep='\t' index=False)
 
-   ### Theoretically at the end, I will have something like the below.
-###python strling-denovo.py --outliers STR.tsv --ped families.ped --out my_output.tsv
-
-
-if __name__ == "__main__": ### don't change this word
-	main()  ### this line is a free for all, but by convention we write a function called main. entry point.
+if __name__ == "__main__":
+	main()
