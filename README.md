@@ -7,6 +7,11 @@ numpy
 peddy (must be in python version 3.7 for peddy)
 math
 
+
+Install dependencies using conda:
+`conda env create environment.yml`  
+`conda activate strling-denovo`
+
 Utilizing STRling output as input, code now counts amplifications over bp threshold and determines Mendelian status (matched to parents, violation, etc.) at a certain depth threshold.
 
 Command line might look something like:
