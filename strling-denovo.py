@@ -14,7 +14,7 @@ def get_args():
         help="outputfile")
     # out will just be the name of the output file... turn up
     parser.add_argument("--wiggle", default=0.1,
-        help="establishes the ranges we are setting for the alleles (default:%(default)s)")
+        help="establishes range for alleles (default:%(default)s)")
     # value between 0 and 1
     parser.add_argument("--minwig", default=10.0,
         help="minimum wiggle for small alleles (default: %(default)s)")
@@ -22,8 +22,9 @@ def get_args():
         help="depth filter (default: %(default)s)")
     parser.add_argument("--ampsize", type=int, default=150,
         help="amplification size filter (default: %(default)s)")
-        # size of de novo expansion, or difference from kid to mom/dad allele sizes
-        #defaulted to 150bp based on elbow plots of Lynch data set
+    parser.add_argument("--allelecutoff", type=float, default=350.0,
+        help="cutoff for max allele size (default: %(default)s)")
+        # size of de novo expansion, or difference from kid to mom/dad alleles
     return parser.parse_args()
 
 def main():
