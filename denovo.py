@@ -34,14 +34,30 @@ def get_args():
 
 # we are now going to define a bunch of functions, hurray!
 def has_parents(sample):
-    """Check if Peddy sample has both parents in ped file"""
+    """Here we perform a check to determine if Peddy sample has both
+    parents in ped file to form trio.
+
+    Parameters:
+    sample (int): taken from ped file to determine trios
+
+    Return: bool
+                True if trio exists and both parents are present
+                False if trio does not exist"""
     if sample.mom is not None and sample.dad is not None:
         return True
     return False
-# this step is important so that we can identify the trios that we are working with
 
 def wiggle(allele, proportion, minwig):
-    """"""
+    """This function establishes a range per allele to account for error in
+    measurement/evaluation of alleles
+
+    Parameters:
+    allele (float):
+    proportion (float):
+    minwig (float):
+
+    Returns: (tuple) (a,b) that is the range per allele
+    """
     if float(proportion) > 1 or float(proportion) < 0:
         raise ValueError('proportion must be a value between 0 and 1')
         # this is a percentage, so to be greater than 1 is not the goal
@@ -55,7 +71,13 @@ def wiggle(allele, proportion, minwig):
     return (a, b)
 
 def allele_check(allele1, allele2):
-    """"""
+    """The allele check
+
+    Parameters:
+    allele1, allele 2 (float): the two alleles taken from an individual, where
+
+    Returns: allele1, allele2 (float) standardized alleles
+    """
     args = get_args()
     # we want to standardize our alleles based on biological/computational factors,
     # so we evaluate them first thing
@@ -114,7 +136,7 @@ def check_range(minwig, proportion, allele1, allele2, kidallele):
         kidallele (float)
 
     Return:
-        bool:
+        bool: True
     """
     args = get_args()
     x,y = get_allele_ranges(minwig, proportion, allele1, allele2)
@@ -146,7 +168,9 @@ def check_range(minwig, proportion, allele1, allele2, kidallele):
 
 def full_allele_check(minwig, proportion, momalleledict, dadalleledict,kidalleledict):
     """"""
-    if (isnan(kidalleledict['allele1']) & isnan(kidalleledict['allele2'])) or (isnan(momalleledict['allele1']) & isnan(momalleledict['allele2'])) or (isnan(dadalleledict['allele1']) & isnan(dadalleledict['allele2'])):
+    if (isnan(kidalleledict['allele1']) & isnan(kidalleledict['allele2'])) or (
+            isnan(momalleledict['allele1']) & isnan(momalleledict['allele2'])) or (
+            isnan(dadalleledict['allele1']) & isnan(dadalleledict['allele2'])):
         return 'Missing alleles,ignore'
         # if any of the trio has both missing alleles, then we are out of there
     else:
@@ -250,7 +274,8 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
             "allele1": row["allele1dad"],
             "allele2": row["allele2dad"]
         }
-        if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'] >= args.depth) & (row['depth_dad'] >= args.depth)):
+        if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'
+                    ] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(args.minwig,
             args.wiggle, momalleledict, dadalleledict, kidalleledict)
             print(row['mendelianstatus'])
@@ -275,7 +300,9 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
         # first we're taking the larger allele for both,
         # which is generally allele2 but we're going to be careful regardless
 
-        kiddadmom['novel_amp'] = (kiddadmom['allelecompkid'] - kiddadmom['allelecompdad'] >= args.ampsize) & (kiddadmom['allelecompkid'] - kiddadmom['allelecompmom'] >= args.ampsize)
+        kiddadmom['novel_amp'] = (kiddadmom['allelecompkid'] - kiddadmom['allelecompdad'
+                                ] >= args.ampsize) & (kiddadmom['allelecompkid'
+                                ] - kiddadmom['allelecompmom'] >= args.ampsize)
         # evaluating for novel amplifications based on the amp size cutoff
         kiddadmom = kiddadmom.drop(columns=['allelecompkid', 'allelecompmom', 'allelecompdad'])
         # drop the extra columns we don't need them
