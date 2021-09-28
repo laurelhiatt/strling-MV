@@ -54,33 +54,34 @@ def wiggle(allele, proportion, minwig):
         # generating the range of alleles
     return (a, b)
 
-def allele_check(allele1, allele2, cutoff):
+def allele_check(allele1, allele2):
     """"""
+    args = get_args()
     # we want to standardize our alleles based on biological/computational factors,
     # so we evaluate them first thing
     # max size is 350.0 since that's about what strling can estimate up to
     if np.all((isinstance(allele1, float)) & (isnan(allele2))):
-        if (allele1 >= cutoff):
-            allele2 = cutoff
-            allele1 = cutoff
+        if (allele1 >= args.allelecutoff):
+            allele2 = args.allelecutoff
+            allele1 = args.allelecutoff
         else:
             allele2 = allele1
     elif np.all((isnan(allele1) & (isinstance(allele2, float)))):
-        if (allele2 >= cutoff):
-            allele1 = cutoff
-            allele2 = cutoff
+        if (allele2 >= args.allelecutoff):
+            allele1 = args.allelecutoff
+            allele2 = args.allelecutoff
         else:
             allele1 = allele2
         # if we have only 1 captured allele,  then NaN is set equal to the other alllele
-    elif np.all(allele2 >= cutoff):
-            if np.all(allele1 >= cutoff):
-                allele2 = cutoff
-                allele1 = cutoff
+    elif np.all(allele2 >= args.allelecutoff):
+            if np.all(allele1 >= args.allelecutoff):
+                allele2 = args.allelecutoff
+                allele1 = args.allelecutoff
             else:
-                allele2 = cutoff
-    elif np.all(allele1 >= cutoff):
-        allele1 = cutoff
-        allele2 = cutoff
+                allele2 = args.allelecutoff
+    elif np.all(allele1 >= args.allelecutoff):
+        allele1 = args.allelecutoff
+        allele2 = args.allelecutoff
     else:
         allele1 = allele1
         allele2 = allele2
@@ -93,14 +94,14 @@ def allele_range(allele1, allele2, proportion, minwig):
     return tple1, tple2
 # here we generate the allele ranges with the built in "wiggle" for both alleles and return 2 tuples
 
-def get_allele_ranges(minwig, proportion, allele1, allele2, cutoff):
+def get_allele_ranges(minwig, proportion, allele1, allele2):
     """"""
-    a, b = allele_check(allele1, allele2, cutoff)
+    a, b = allele_check(allele1, allele2)
     x, y = (allele_range(a, b, proportion, minwig))
     return x, y
     # this may start looking redundant, but this is how we make sure all of our alleles have been "checked" before we generate the ranges
 
-def check_range(minwig, proportion, allele1, allele2, kidallele, cutoff):
+def check_range(minwig, proportion, allele1, allele2, kidallele):
     """Here we compare a kid allele to the parental alleles, taken from the
         prior functions there are various returned values in case we wish to
         capture this output later, that can be easily added
@@ -115,10 +116,11 @@ def check_range(minwig, proportion, allele1, allele2, kidallele, cutoff):
     Return:
         bool:
     """
-    x,y = get_allele_ranges(minwig, proportion, allele1, allele2, cutoff)
+    args = get_args()
+    x,y = get_allele_ranges(minwig, proportion, allele1, allele2)
     a,b = x
     c,d = y
-    if np.all(kidallele < cutoff):
+    if np.all(kidallele < args.allelecutoff):
         if (a <= kidallele <= b) | (c <= kidallele <= d):
             return True
             # allele match
@@ -129,29 +131,29 @@ def check_range(minwig, proportion, allele1, allele2, kidallele, cutoff):
             return 'Deletion'
         # if the kidi allele is below the threshold, it should be in range of the parent alleles
     else:
-        if (a >= cutoff):
+        if (a >= args.allelecutoff):
             return True
-        elif ( b>= cutoff):
+        elif ( b>= args.allelecutoff):
             return True
-        elif (c >= cutoff):
+        elif (c >= args.allelecutoff):
             return True
-        elif (d >= cutoff):
+        elif (d >= args.allelecutoff):
             return True
         else:
             return 'Amplification'
         # if the kid allele is above the 350bp threshold, and none of the parents are at or above the threshold, it's read as an amplification
         # ASK HARRIET ABOUT THIS
 
-def full_allele_check(minwig, proportion, momalleledict, dadalleledict,kidalleledict, cutoff):
+def full_allele_check(minwig, proportion, momalleledict, dadalleledict,kidalleledict):
     """"""
     if (isnan(kidalleledict['allele1']) & isnan(kidalleledict['allele2'])) or (isnan(momalleledict['allele1']) & isnan(momalleledict['allele2'])) or (isnan(dadalleledict['allele1']) & isnan(dadalleledict['allele2'])):
         return 'Missing alleles,ignore'
         # if any of the trio has both missing alleles, then we are out of there
     else:
         if check_range(minwig, proportion, momalleledict['allele1'],
-            momalleledict['allele2'],kidalleledict['allele1'], cutoff) is True:
+            momalleledict['allele2'],kidalleledict['allele1']) is True:
             if check_range(minwig, proportion, dadalleledict['allele1'],
-            dadalleledict['allele2'],kidalleledict['allele2'], cutoff) is True:
+            dadalleledict['allele2'],kidalleledict['allele2']) is True:
                 return 'Full match'
                 # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
             else:
@@ -160,10 +162,10 @@ def full_allele_check(minwig, proportion, momalleledict, dadalleledict,kidallele
         else:
             if check_range(minwig, proportion, momalleledict['allele1'],
                             momalleledict['allele2'],
-                            kidalleledict['allele2'], cutoff) is True:
+                            kidalleledict['allele2']) is True:
                 if check_range(minwig, proportion, dadalleledict['allele1'],
                             dadalleledict['allele2'],
-                            kidalleledict['allele1'], cutoff) is True:
+                            kidalleledict['allele1']) is True:
                     return "Full match"
                 else:
                     return 'MV'
@@ -171,13 +173,13 @@ def full_allele_check(minwig, proportion, momalleledict, dadalleledict,kidallele
             else:
                 if check_range(minwig, proportion, dadalleledict['allele1'],
                             dadalleledict['allele2'],
-                            kidalleledict['allele1'], cutoff) is True:
+                            kidalleledict['allele1']) is True:
                     return 'MV'
                     # allele 1 matches dad but allele 1 but allele 2 doesn't match mom
                 else:
                     if check_range(minwig, proportion, dadalleledict['allele1'],
                             dadalleledict['allele2'],
-                            kidalleledict['allele2'], cutoff) is True:
+                            kidalleledict['allele2']) is True:
                         return 'MV'
                         # allele 2 matches dad but allele 1 doesn't match mom
                     else:
@@ -250,8 +252,7 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
         }
         if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(args.minwig,
-            args.wiggle, momalleledict, dadalleledict, kidalleledict,
-            args.allelecutoff)
+            args.wiggle, momalleledict, dadalleledict, kidalleledict)
             print(row['mendelianstatus'])
             # if we meet the depth filter,
             # we do a full allele check and report the result in a new column
