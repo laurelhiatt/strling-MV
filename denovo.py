@@ -263,11 +263,16 @@ def full_allele_check(momalleledict, dadalleledict,kidalleledict):
 
 def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that has
-    both information about the Mendelian status of the trio (whether kid is a
-    full match to parents, has ) as well as whether
+    information about the Mendelian status of the trio (whether kid is a
+    full match to parents, has one Mendelian violation, etc.) as well as
+    whether the kid has an amplification  (set by the argumpent ampsize)
+    compared to both parents.
 
-    Only trios where all three members have the loci pass a depth filter will
+    Only trios where all three members' loci pass a depth filter will
     have information reported.
+
+    This function is also responsible for printing the Mendelian status value
+    count and the novel amplification count per sample.
 
     Parameters:
         df (dataframe): dataframe of STRling outlier data
@@ -275,10 +280,11 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
         mom (str): sample ID for mom
         dad (str): sample ID for dad
         mutation (str): mutation implicated in trio
-        writeHeader (boolean): adds header to beginning of file
+        writeHeader (boolean): adds header to beginning of file, once
 
     Returns:
-
+            Altered dataframe with full_allele_check strings for mendelianstatus
+            column and True/False value for novel_amp (novel amplification)
     """
     args = get_args()
     dfkid = df.loc[df['sample'] == kid]
@@ -312,8 +318,8 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
     for item in drop_from_parents:
         if item not in df.columns:
             not_in_df.append(item)
-# with different strling output, we will have different columns
-# so we want to make sure we avoid any codebreaking column drops
+    # with different strling output, we will have different columns
+    # so we want to make sure we avoid any codebreaking column drops
     for x in not_in_df:
         drop_from_parents.remove(x)
     dfkid = dfkid.drop(drop_from_dkid, axis=1)
@@ -346,7 +352,6 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict)
-            print(row['mendelianstatus'])
             # if we meet the depth filter,
             # we do a full allele check and report the result in a new column
         else: row['mendelianstatus'] = 'does not meet depth filter'
@@ -395,6 +400,7 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
 
 def get_denovos(args):
     """
+    Tying it all together: 
     """
     df = pd.read_table(args.outliers, delim_whitespace = True,
                         dtype = {'sample' : str}, index_col = False)
