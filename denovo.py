@@ -400,7 +400,9 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
 
 def get_denovos(args):
     """
-    Tying it all together: 
+    Tying it all together: here we import the files we need from their arguments,
+    and set up the strlingMV function to run on every sample that is the kid of
+    a trio.
     """
     df = pd.read_table(args.outliers, delim_whitespace = True,
                         dtype = {'sample' : str}, index_col = False)
