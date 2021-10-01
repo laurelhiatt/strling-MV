@@ -3,13 +3,15 @@ sys.path.append("..")
 from denovo import *
 import pytest
 
+args = get_args(['--outliers', 'test.tsv', '--ped', 'test.ped'])
+# additional args set with default values
+
 @pytest.mark.parametrize("allele1, allele2, expected", [
-    (100, 0.1, 1, (90, 110.00000000000001)),
-    (0, 0.1, 1, (-1, 1)),
-    (10, 0.1, 5, (5, 15)),
+    (100, 200, (100, 200)),
+    (0, 600, (0, 350)),
 ])
 def test_allele_check(allele1, allele2, expected):
-    assert allele_check(allele1, allele2) == expected
+    assert allele_check(allele1, allele2, args) == expected
 
 @pytest.mark.parametrize("allele, expected", [
     (100, 0.1, 1, (90, 110.00000000000001)),
