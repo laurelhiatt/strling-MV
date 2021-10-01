@@ -175,7 +175,7 @@ def check_range(allele1, allele2, kidallele, args):
             Non-true, strings otherwise (see above comment)
     """
 
-    x, y = get_allele_ranges(allele1, allele2)
+    x, y = get_allele_ranges(allele1, allele2, args)
     a, b = x
     c, d = y
 
@@ -194,7 +194,7 @@ def check_range(allele1, allele2, kidallele, args):
         else:
             return 'Amplification'
 
-def full_allele_check(momalleledict, dadalleledict,kidalleledict):
+def full_allele_check(momalleledict, dadalleledict,kidalleledict, args):
     """This is the final kit'n'kaboodle for the script: here, we evalaute the
     trio to make sure we have sufficient alleles to run the comparison, and then
     if we do, we compare the kid alleles to the parent alleles in an order that
@@ -347,7 +347,7 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(
-            momalleledict, dadalleledict, kidalleledict)
+            momalleledict, dadalleledict, kidalleledict, args)
         else: row['mendelianstatus'] = 'under depth filter'
         kiddadmom.at[index, 'mendelianstatus'] = row['mendelianstatus']
         # we add our new column to the main data frame
