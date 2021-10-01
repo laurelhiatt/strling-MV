@@ -6,7 +6,7 @@ from math import isnan
 import argparse
 # these are the necessary modules for this code
 
-def get_args():
+def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
     parser = argparse.ArgumentParser()
 
@@ -34,7 +34,7 @@ def get_args():
     parser.add_argument("--allelecutoff", type=float, default=350.0,
         help="cutoff for max allele size (default: %(default)s)")
         # size of de novo expansion, or difference from kid to mom/dad alleles
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 # we are now going to define a bunch of functions, hurray!
 def has_parents(sample):
@@ -53,7 +53,7 @@ def has_parents(sample):
         return True
     return False
 
-def allele_check(allele1, allele2):
+def allele_check(allele1, allele2, args):
     """The allele check ensures that an allele pair taken from a member of the
     trio are functional for analysis: a NaN allele will take the other allele's
     value, and any allele that is greater than the allelecutoff will be set to
@@ -65,7 +65,6 @@ def allele_check(allele1, allele2):
 
     Returns: allele1, allele2 (float): standardized alleles
     """
-    args = get_args()
 
     if np.all((isinstance(allele1, float)) & (isnan(allele2))):
         if (allele1 >= args.allelecutoff):
@@ -97,7 +96,7 @@ def allele_check(allele1, allele2):
         allele2 = allele2
     return allele1, allele2
 
-def wiggle(allele):
+def wiggle(allele, args):
     """This function establishes a range per allele to account for error in
     measurement/evaluation of alleles as determined by the wiggle
     (proportion to be +/- based on allele) and minwiggle, the minimum set wiggle
@@ -110,7 +109,6 @@ def wiggle(allele):
     Returns:
             (a, b) (tuple): the parent allele range to match a kid allele
     """
-    args = get_args()
 
     if float(args.wiggle) > 1 or float(args.wiggle) < 0:
         raise ValueError('wiggle proportion must be a value between 0 and 1')
@@ -125,7 +123,7 @@ def wiggle(allele):
     return (a, b)
 
 
-def allele_range(allele1, allele2):
+def allele_range(allele1, allele2, args):
     """Here we generate the allele ranges for both alleles from a parent using
     the other function wiggle
 
@@ -136,13 +134,13 @@ def allele_range(allele1, allele2):
         tpl1, tple2 (tuples): the two ranges, one tuple per allele
     """
 
-    tple1 = wiggle(allele1)
-    tple2 = wiggle(allele2)
+    tple1 = wiggle(allele1, args)
+    tple2 = wiggle(allele2, args)
 
     return tple1, tple2
 
 
-def get_allele_ranges(allele1, allele2):
+def get_allele_ranges(allele1, allele2, args):
     """This function combines the previously defined functions allele_check and
     allele_range in order to standardize alleles and then generate their tuple
     ranges based on that. Thus, this function gets final allele ranges for each
@@ -155,12 +153,12 @@ def get_allele_ranges(allele1, allele2):
         (a,b), (c,d) (tuple): two allele ranges for a parent's two alleles
     """
 
-    a, b = allele_check(allele1, allele2)
-    x, y = (allele_range(a, b))
+    a, b = allele_check(allele1, allele2, args)
+    x, y = (allele_range(a, b, args))
 
     return x, y
 
-def check_range(allele1, allele2, kidallele):
+def check_range(allele1, allele2, kidallele, args):
     """Here we compare a kid allele to the parental alleles, which are run
     through the get_allele_ranges function to generate the final allele ranges.
 
@@ -176,7 +174,6 @@ def check_range(allele1, allele2, kidallele):
             True if there is a match between kid and parent
             Non-true, strings otherwise (see above comment)
     """
-    args = get_args()
 
     x, y = get_allele_ranges(allele1, allele2)
     a, b = x
@@ -225,9 +222,9 @@ def full_allele_check(momalleledict, dadalleledict,kidalleledict):
 
     else:
         if check_range(momalleledict['allele1'],
-            momalleledict['allele2'],kidalleledict['allele1']) is True:
+            momalleledict['allele2'],kidalleledict['allele1'], args) is True:
             if check_range(dadalleledict['allele1'],
-            dadalleledict['allele2'],kidalleledict['allele2']) is True:
+            dadalleledict['allele2'],kidalleledict['allele2'], args) is True:
                 return 'Full match'
                 # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
             else:
@@ -236,9 +233,9 @@ def full_allele_check(momalleledict, dadalleledict,kidalleledict):
 
         else:
             if check_range(momalleledict['allele1'], momalleledict['allele2'],
-                            kidalleledict['allele2']) is True:
+                            kidalleledict['allele2'], args) is True:
                 if check_range(dadalleledict['allele1'], dadalleledict['allele2'],
-                            kidalleledict['allele1']) is True:
+                            kidalleledict['allele1'], args) is True:
                     return "Full match"
                 else:
                     return 'MV'
@@ -247,21 +244,21 @@ def full_allele_check(momalleledict, dadalleledict,kidalleledict):
             else:
                 if check_range(dadalleledict['allele1'],
                             dadalleledict['allele2'],
-                            kidalleledict['allele1']) is True:
+                            kidalleledict['allele1'], args) is True:
                     return 'MV'
                     # allele 1 matches dad, but allele 2 doesn't match mom
 
                 else:
                     if check_range(dadalleledict['allele1'],
                             dadalleledict['allele2'],
-                            kidalleledict['allele2']) is True:
+                            kidalleledict['allele2'], args) is True:
                         return 'MV'
                         # allele 2 matches dad but allele 1 doesn't match mom
                     else:
                         return 'Double MV, likely error'
                         # no matches to mom or dad
 
-def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
+def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that has
     information about the Mendelian status of the trio (whether kid is a
     full match to parents, has one Mendelian violation, etc.) as well as
@@ -286,7 +283,6 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
             Altered dataframe with full_allele_check strings for mendelianstatus
             column and True/False value for novel_amp (novel amplification)
     """
-    args = get_args()
     dfkid = df.loc[df['sample'] == kid]
     #match the data frame to the samples of the individual or "kid"
     dfkid['mutation'] = mutation
@@ -420,7 +416,7 @@ def get_denovos(args):
                 #mom will override dad if both are non-zero
                 # this could be a problem...
             strlingMV(df, sample.sample_id, sample.maternal_id,
-                    sample.paternal_id, mutation, writeHeader)
+                    sample.paternal_id, mutation, args, writeHeader)
             writeHeader = False #don't want to keep writing header
 
 if __name__ == "__main__":

@@ -4,17 +4,25 @@ from denovo import *
 import pytest
 import argparse
 
+args = get_args(['--outliers', 'test.tsv', '--ped', 'test.ped'])
+# additional args set with default values
+
 @pytest.mark.parametrize("allele1, allele2, expected", [
+<<<<<<< HEAD
     (100, 100, (100, 100)),
+=======
+    (100, 200, (100, 200)),
+    (0, 600, (0, 350)),
+>>>>>>> 72a52adbca8983cd3426012107137c091ce0f10a
 ])
 def test_allele_check(allele1, allele2, expected):
-    assert allele_check(allele1, allele2) == expected
+    assert allele_check(allele1, allele2, args) == expected
 
 @pytest.mark.skip
 @pytest.mark.parametrize("allele, expected", [
-    (100, (90, 110.00000000000001)),
-    (0, (-1, 1)),
-    (10, (5, 15)),
+    (100, 0.1, 1, (90, 110.00000000000001)),
+    (0, 0.1, 1, (-1, 1)),
+    (10, 0.1, 5, (5, 15)),
 ])
 
 @pytest.mark.skip
