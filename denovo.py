@@ -352,12 +352,10 @@ def strlingMV(df, kid, mom, dad, mutation, writeHeader = True):
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict)
-            # if we meet the depth filter,
-            # we do a full allele check and report the result in a new column
-        else: row['mendelianstatus'] = 'does not meet depth filter'
+        else: row['mendelianstatus'] = 'under depth filter'
         kiddadmom.at[index, 'mendelianstatus'] = row['mendelianstatus']
         # we add our new column to the main data frame
-        kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'does not meet depth filter']
+        kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
         # drop any rows that didn't meet the depth filter
 
         kiddadmom["allelecompkid"] = kiddadmom[["allele1kid",
@@ -406,14 +404,11 @@ def get_denovos(args):
     """
     df = pd.read_table(args.outliers, delim_whitespace = True,
                         dtype = {'sample' : str}, index_col = False)
-    #this is where we input our STRLing outlier data, super exciting!
     ped = peddy.Ped(args.ped, 'Paternal_ID' == str, )
     with open(args.out, 'w') as newfile:
             pass
     writeHeader = True
     for sample in ped.samples():
-        # we're gonna go through all the samples
-        # evaluate if there is a trio for comparison
         if has_parents(sample):
             if sample.mom.phenotype != '0':
                 mutation = sample.mom.phenotype
