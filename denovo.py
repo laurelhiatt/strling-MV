@@ -2,7 +2,6 @@ import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
 import peddy # must be in python version 3.7 for peddy to actually work
-from math import isnan
 import argparse
 # these are the necessary modules for this code
 
@@ -66,14 +65,14 @@ def allele_check(allele1, allele2, args):
     Returns: allele1, allele2 (float): standardized alleles
     """
 
-    if np.all((isinstance(allele1, float)) & (isnan(allele2))):
+    if (not np.isnan(allele1)) & np.isnan(allele2):
         if (allele1 >= args.allelecutoff):
             allele2 = args.allelecutoff
             allele1 = args.allelecutoff
         else:
             allele2 = allele1
 
-    elif np.all((isnan(allele1) & (isinstance(allele2, float)))):
+    elif np.isnan(allele1) & (not np.isnan(allele2)):
         if (allele2 >= args.allelecutoff):
             allele1 = args.allelecutoff
             allele2 = args.allelecutoff
@@ -194,7 +193,7 @@ def check_range(allele1, allele2, kidallele, args):
         else:
             return 'Amplification'
 
-def full_allele_check(momalleledict, dadalleledict,kidalleledict, args):
+def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     """This is the final kit'n'kaboodle for the script: here, we evalaute the
     trio to make sure we have sufficient alleles to run the comparison, and then
     if we do, we compare the kid alleles to the parent alleles in an order that
@@ -214,21 +213,21 @@ def full_allele_check(momalleledict, dadalleledict,kidalleledict, args):
             we get a Mendelian violation  or MV
             'Double MV, likely error' (str):
     """
-    if (isnan(kidalleledict['allele1']) & isnan(kidalleledict['allele2'])) or (
-            isnan(momalleledict['allele1']) & isnan(momalleledict['allele2'])) or (
-            isnan(dadalleledict['allele1']) & isnan(dadalleledict['allele2'])):
-        return 'Missing alleles,ignore'
+    if (np.isnan(kidalleledict['allele1']) & np.isnan(kidalleledict['allele2'])) or (
+            np.isnan(momalleledict['allele1']) & np.isnan(momalleledict['allele2'])) or (
+            np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
+        return 'Missing alleles, ignore'
         # if any of the trio has both missing alleles, then we are out of there
 
     else:
         if check_range(momalleledict['allele1'],
             momalleledict['allele2'],kidalleledict['allele1'], args) is True:
-            if check_range(dadalleledict['allele1'],
-            dadalleledict['allele2'],kidalleledict['allele2'], args) is True:
-                return 'Full match'
+                if check_range(dadalleledict['allele1'],
+                dadalleledict['allele2'],kidalleledict['allele2'], args) is True:
+                    return 'Full match'
                 # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
-            else:
-                return 'MV'
+                else:
+                    return 'MV'
                 # kid allele 1 matches mom, kid allele 2 doesn't match dad, MV
 
         else:
