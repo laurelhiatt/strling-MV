@@ -74,9 +74,10 @@ def test_get_allele_ranges(allele1, allele2, expected):
     (np.nan, 100, 100, True), # nan allele doesn't change match
     (np.nan, 50, 45, True), # allele still matches if within range
     (500, 100, 1000, True), # large alleles match even if outside range
-    (500, 100, 30, 'Deletion'), # if kid alelle is smaller, it is a deletion
-    (30, 25, 50, 'Amplification'), # checking amplification
-    (200, 300, 500, True) # check large allele amplification ***
+    (500, 100, 30, False), # if kid alelle is smaller, it is a deletion
+    (30, 25, 50, False), # checking amplification
+    (200, 300, 500, False), # check large allele amplification ***
+    (0, np.nan, 3000, False), # large in kid vs 0 in parent
     ])
 
 def test_check_range(allele1, allele2, kidallele, expected):
@@ -101,7 +102,7 @@ def test_check_range(allele1, allele2, kidallele, expected):
     #ensure missing alleles are ignored
 
     ({'allele1': 0, 'allele2': np.nan}, {'allele1': np.nan, 'allele2': 0},
-    {'allele1': 3000, 'allele2': 150}, 'MV')
+    {'allele1': 3000, 'allele2': 150}, 'Double MV, likely error')
     # THIS SHOULDN'T BE AN MV! NEITHER OF THE TWO ALLELES MATCH!!!
     ])
 

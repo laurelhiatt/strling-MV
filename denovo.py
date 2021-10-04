@@ -170,28 +170,25 @@ def check_range(allele1, allele2, kidallele, args):
 
     Return:
         bool:
-            True if there is a match between kid and parent
-            Non-true, strings otherwise (see above comment)
+            True if there is a match between kid and parent, otherwise, False
     """
 
-    x, y = get_allele_ranges(allele1, allele2, args)
-    a, b = x
-    c, d = y
+    a1_range, a2_range = get_allele_ranges(allele1, allele2, args)
+    a1_low, a1_high = a1_range
+    a2_low, a2_high = a2_range
 
-    if np.all(kidallele < args.allelecutoff):
-        if (a <= kidallele <= b) | (c <= kidallele <= d):
+    if kidallele < args.allelecutoff:
+        if (a1_low <= kidallele <= a1_high) | (a2_low <= kidallele <= a2_high):
             return True
-            # allele match
-        elif kidallele > a and b and c and d:
-            return 'Amplification'
-        else:
-            return 'Deletion'
+        else: 
+            return False
 
     else:
-        if (a or b or c or d >= args.allelecutoff):
+        # If both kid and parent allele exceed threshold, they match
+        if (a1_high >= args.allelecutoff) | (a2_high >= args.allelecutoff):
             return True
         else:
-            return 'Amplification'
+            return False #'Amplification'
 
 def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     """This is the final kit'n'kaboodle for the script: here, we evalaute the
@@ -213,53 +210,37 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             we get a Mendelian violation  or MV
             'Double MV, likely error' (str):
     """
+    print(momalleledict, dadalleledict, kidalleledict)
+
+    # if any of the trio has both missing alleles, then we are out of there
     if (np.isnan(kidalleledict['allele1']) & np.isnan(kidalleledict['allele2'])) or (
             np.isnan(momalleledict['allele1']) & np.isnan(momalleledict['allele2'])) or (
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
         return 'Missing alleles, ignore'
-        # if any of the trio has both missing alleles, then we are out of there
+
+    kidallele1_matches_mom = check_range(momalleledict['allele1'], momalleledict['allele2'], kidalleledict['allele1'], args)
+    kidallele1_matches_dad = check_range(dadalleledict['allele1'], dadalleledict['allele2'], kidalleledict['allele1'], args)
+    kidallele2_matches_mom = check_range(momalleledict['allele1'], momalleledict['allele2'], kidalleledict['allele2'], args)
+    kidallele2_matches_dad = check_range(dadalleledict['allele1'], dadalleledict['allele2'], kidalleledict['allele2'], args)
+   
+    print('kidallele1_matches_mom ', kidallele1_matches_mom)
+    print('kidallele1_matches_dad ', kidallele1_matches_dad)
+    print('kidallele2_matches_mom ',  kidallele2_matches_mom)
+    print('kidallele2_matches_dad ', kidallele2_matches_dad)
+ 
+    # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
+    if kidallele1_matches_mom and kidallele2_matches_dad:
+        return 'Full match'
+
+    # allele 2 matches mom and allele 1 matches dad
+    elif kidallele2_matches_mom and kidallele1_matches_dad:
+        return 'Full match'
+
+    elif (kidallele1_matches_mom, kidallele1_matches_dad, kidallele2_matches_mom, kidallele2_matches_dad) == (False, False, False, False):
+        return 'Double MV, likely error'
+    
     else:
-        if (check_range(momalleledict['allele1'], momalleledict['allele2'],
-            kidalleledict['allele1'], args) is True) and (check_range(dadalleledict['allele1'],
-                    dadalleledict['allele2'],kidalleledict['allele2'], args) is True):
-                    return 'Full match'
-                  # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
-
-        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
-                    kidalleledict['allele2'], args) is True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
-                    kidalleledict['allele1'], args) is True):
-                    return 'Full match'
-                    # allele 2 matches mom and allele 1 matches dad
-
-        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
-            kidalleledict['allele1'], args) is True) and (check_range(dadalleledict['allele1'],
-                    dadalleledict['allele2'],kidalleledict['allele2'], args) is not True):
-                    return 'MV'
-                  # kid allele 1 matches mom, kid allele 2 doesn't match dad, MV
-
-        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
-                    kidalleledict['allele2'], args) is True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
-                    kidalleledict['allele1'], args) is not True):
-                    return 'MV'
-                      # same as above except allele 2 to mom and allele 1 to dad
-
-        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
-                    kidalleledict['allele2'], args) is not True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
-                    kidalleledict['allele1'], args) is True):
-                    return 'MV'
-
-        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
-                    kidalleledict['allele2'], args) is not True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
-                    kidalleledict['allele1'], args) is not True):
-                    return 'Double MV, likely error'
-
-        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
-            kidalleledict['allele1'], args) is not True) and (check_range(dadalleledict['allele1'],
-                    dadalleledict['allele2'],kidalleledict['allele2'], args) is not True):
-                    return 'Double MV, likely error'
-
-        else:
-            return 'Check alleles manually'
+        return 'MV'
 
 def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that has
