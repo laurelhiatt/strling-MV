@@ -218,44 +218,48 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
         return 'Missing alleles, ignore'
         # if any of the trio has both missing alleles, then we are out of there
-
     else:
-        if check_range(momalleledict['allele1'],
-            momalleledict['allele2'],kidalleledict['allele1'], args) is True:
-                if check_range(dadalleledict['allele1'],
-                dadalleledict['allele2'],kidalleledict['allele2'], args) is True:
+        if (check_range(momalleledict['allele1'], momalleledict['allele2'],
+            kidalleledict['allele1'], args) is True) and (check_range(dadalleledict['allele1'],
+                    dadalleledict['allele2'],kidalleledict['allele2'], args) is True):
                     return 'Full match'
-                # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
-                else:
+                  # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
+
+        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
+                    kidalleledict['allele2'], args) is True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
+                    kidalleledict['allele1'], args) is True):
+                    return 'Full match'
+                    # allele 2 matches mom and allele 1 matches dad
+
+        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
+            kidalleledict['allele1'], args) is True) and (check_range(dadalleledict['allele1'],
+                    dadalleledict['allele2'],kidalleledict['allele2'], args) is not True):
                     return 'MV'
-                # kid allele 1 matches mom, kid allele 2 doesn't match dad, MV
+                  # kid allele 1 matches mom, kid allele 2 doesn't match dad, MV
+
+        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
+                    kidalleledict['allele2'], args) is True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
+                    kidalleledict['allele1'], args) is not True):
+                    return 'MV'
+                      # same as above except allele 2 to mom and allele 1 to dad
+
+        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
+                    kidalleledict['allele2'], args) is not True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
+                    kidalleledict['allele1'], args) is True):
+                    return 'MV'
+
+        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
+                    kidalleledict['allele2'], args) is not True) and (check_range(dadalleledict['allele1'], dadalleledict['allele2'],
+                    kidalleledict['allele1'], args) is not True):
+                    return 'Double MV, likely error'
+
+        elif (check_range(momalleledict['allele1'], momalleledict['allele2'],
+            kidalleledict['allele1'], args) is not True) and (check_range(dadalleledict['allele1'],
+                    dadalleledict['allele2'],kidalleledict['allele2'], args) is not True):
+                    return 'Double MV, likely error'
 
         else:
-            if check_range(momalleledict['allele1'], momalleledict['allele2'],
-                            kidalleledict['allele2'], args) is True:
-                if check_range(dadalleledict['allele1'], dadalleledict['allele2'],
-                            kidalleledict['allele1'], args) is True:
-                    return "Full match"
-                else:
-                    return 'MV'
-                    # same as above except allele 2 to mom and allele 1 to dad
-
-            else:
-                if check_range(dadalleledict['allele1'],
-                            dadalleledict['allele2'],
-                            kidalleledict['allele1'], args) is True:
-                    return 'MV'
-                    # allele 1 matches dad, but allele 2 doesn't match mom
-
-                else:
-                    if check_range(dadalleledict['allele1'],
-                            dadalleledict['allele2'],
-                            kidalleledict['allele2'], args) is True:
-                        return 'MV'
-                        # allele 2 matches dad but allele 1 doesn't match mom
-                    else:
-                        return 'Double MV, likely error'
-                        # no matches to mom or dad
+            return 'Check alleles manually'
 
 def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that has
