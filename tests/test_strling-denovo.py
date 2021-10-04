@@ -100,9 +100,9 @@ def test_check_range(allele1, allele2, kidallele, expected):
     {'allele1': 150, 'allele2': 150}, 'Missing alleles, ignore'),
     #ensure missing alleles are ignored
 
-    ({'allele1': 3000, 'allele2': 150}, {'allele1': 150, 'allele2': 150},
-    {'allele1': 3000, 'allele2': 150}, 'Full match')
-    #
+    ({'allele1': 0, 'allele2': np.nan}, {'allele1': np.nan, 'allele2': 0},
+    {'allele1': 3000, 'allele2': 150}, 'MV')
+    # THIS SHOULDN'T BE AN MV! NEITHER OF THE TWO ALLELES MATCH!!!
     ])
 
 def test_full_allele_check(mom_dict, dad_dict, kid_dict, expected):
