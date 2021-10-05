@@ -12,29 +12,29 @@ def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--outliers", required=True,
+    parser.add_argument("--outliers", required = True,
         help="input outlier file name, STRling output")
 
-    parser.add_argument("--ped", required=True,
+    parser.add_argument("--ped", required = True,
         help="input ped file to sort trios")
 
     parser.add_argument("--out",
         help="output file name")
 
-    parser.add_argument("--wiggle", default=0.1,
+    parser.add_argument("--wiggle", type = float or int, default = 0.1,
         help="b/w 0 and 1, establishes range for alleles (default:%(default)s)")
 
-    parser.add_argument("--minwig", default=10.0,
+    parser.add_argument("--minwig", type = float or int, default = 10.0,
         help="minimum wiggle for small alleles (default: %(default)s)")
 
-    parser.add_argument("--depth", type=int, default=15,
+    parser.add_argument("--depth", type = int, default = 15,
         help="depth filter (default: %(default)s)")
 
         # size of de novo expansion, or difference from kid to mom/dad alleles
-    parser.add_argument("--ampsize", type=int, default=150,
+    parser.add_argument("--ampsize", type = int, default = 150,
         help="amplification size filter (default: %(default)s)")
 
-    parser.add_argument("--allelecutoff", type=float, default=350.0,
+    parser.add_argument("--allelecutoff", type = float, default = 350.0,
         help="cutoff for max allele size (default: %(default)s)")
 
     return parser.parse_args(args)
@@ -113,7 +113,7 @@ def wiggle(allele, args):
             (a, b) (tuple): the parent allele range to match a kid allele
     """
 
-    if (args.wiggle > 1) or (args.wiggle < 0):
+    if (args.wiggle > 1.0) or (args.wiggle < 0.0):
         raise ValueError('wiggle proportion must be a value between 0 and 1')
 
     elif allele*(args.wiggle) < args.minwig:
@@ -275,7 +275,7 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
             Altered dataframe with full_allele_check strings for mendelianstatus
             column and True/False value for novel_amp (novel amplification)
     """
-    
+
     # match the data frame to the samples of the individual or "kid"
     dfkid = df.loc[df['sample'] == kid]
     dfkid['mutation'] = mutation
