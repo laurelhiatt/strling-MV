@@ -102,7 +102,10 @@ def test_check_range(allele1, allele2, kidallele, expected):
     #ensure missing alleles are ignored
 
     ({'allele1': 0, 'allele2': np.nan}, {'allele1': np.nan, 'allele2': 0},
-    {'allele1': 3000, 'allele2': 150}, 'Double MV, likely error')
+    {'allele1': 3000, 'allele2': 150}, 'Double MV, likely error'),
+
+    ({'allele1': 20, 'allele2': 31.27}, {'allele1': 20.0, 'allele2': 88},
+    {'allele1': 20, 'allele2': 36.26}, 'Full match'),
     # THIS SHOULDN'T BE AN MV! NEITHER OF THE TWO ALLELES MATCH!!!
     ])
 

@@ -79,14 +79,14 @@ def allele_check(allele1, allele2, args):
         else:
             allele1 = allele2
 
-    elif np.all(allele2 >= args.allelecutoff):
-            if np.all(allele1 >= args.allelecutoff):
+    elif (allele2 >= args.allelecutoff):
+            if (allele1 >= args.allelecutoff):
                 allele2 = args.allelecutoff
                 allele1 = args.allelecutoff
             else:
                 allele2 = args.allelecutoff
 
-    elif np.all(allele1 >= args.allelecutoff):
+    elif (allele1 >= args.allelecutoff):
         allele1 = args.allelecutoff
         allele2 = args.allelecutoff
 
@@ -109,17 +109,17 @@ def wiggle(allele, args):
             (a, b) (tuple): the parent allele range to match a kid allele
     """
 
-    if float(args.wiggle) > 1 or float(args.wiggle) < 0:
+    if (args.wiggle > 1) or (args.wiggle < 0):
         raise ValueError('wiggle proportion must be a value between 0 and 1')
 
-    elif allele*float(args.wiggle) < args.minwig:
-         (a, b) = (allele - args.minwig, allele + args.minwig)
+    elif allele*(args.wiggle) < args.minwig:
+         (a1, a2) = (allele - args.minwig, allele + args.minwig)
 
     else:
-         (a, b) = ((float(allele)) * (1 - float(args.wiggle)),
-                    (float(allele)) * (1 + float(args.wiggle)))
+         (a1, a2) = (allele * (1 - args.wiggle),
+                    allele * (1 + args.wiggle))
 
-    return (a, b)
+    return (a1, a2)
 
 
 def allele_range(allele1, allele2, args):
@@ -133,10 +133,10 @@ def allele_range(allele1, allele2, args):
         tpl1, tple2 (tuples): the two ranges, one tuple per allele
     """
 
-    tple1 = wiggle(allele1, args)
-    tple2 = wiggle(allele2, args)
+    a1_range = wiggle(allele1, args)
+    a2_range = wiggle(allele2, args)
 
-    return tple1, tple2
+    return a1_range, a2_range
 
 
 def get_allele_ranges(allele1, allele2, args):
@@ -152,10 +152,10 @@ def get_allele_ranges(allele1, allele2, args):
         (a,b), (c,d) (tuple): two allele ranges for a parent's two alleles
     """
 
-    a, b = allele_check(allele1, allele2, args)
-    x, y = (allele_range(a, b, args))
+    a1, a2 = allele_check(allele1, allele2, args)
+    a1_range, a2_range = (allele_range(a1, a2, args))
 
-    return x, y
+    return a1_range, a2_range
 
 def check_range(allele1, allele2, kidallele, args):
     """Here we compare a kid allele to the parental alleles, which are run
@@ -180,7 +180,7 @@ def check_range(allele1, allele2, kidallele, args):
     if kidallele < args.allelecutoff:
         if (a1_low <= kidallele <= a1_high) | (a2_low <= kidallele <= a2_high):
             return True
-        else: 
+        else:
             return False
 
     else:
@@ -210,7 +210,6 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             we get a Mendelian violation  or MV
             'Double MV, likely error' (str):
     """
-    print(momalleledict, dadalleledict, kidalleledict)
 
     # if any of the trio has both missing alleles, then we are out of there
     if (np.isnan(kidalleledict['allele1']) & np.isnan(kidalleledict['allele2'])) or (
@@ -222,12 +221,8 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     kidallele1_matches_dad = check_range(dadalleledict['allele1'], dadalleledict['allele2'], kidalleledict['allele1'], args)
     kidallele2_matches_mom = check_range(momalleledict['allele1'], momalleledict['allele2'], kidalleledict['allele2'], args)
     kidallele2_matches_dad = check_range(dadalleledict['allele1'], dadalleledict['allele2'], kidalleledict['allele2'], args)
-   
-    print('kidallele1_matches_mom ', kidallele1_matches_mom)
-    print('kidallele1_matches_dad ', kidallele1_matches_dad)
-    print('kidallele2_matches_mom ',  kidallele2_matches_mom)
-    print('kidallele2_matches_dad ', kidallele2_matches_dad)
- 
+
+
     # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
     if kidallele1_matches_mom and kidallele2_matches_dad:
         return 'Full match'
@@ -238,7 +233,7 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
 
     elif (kidallele1_matches_mom, kidallele1_matches_dad, kidallele2_matches_mom, kidallele2_matches_dad) == (False, False, False, False):
         return 'Double MV, likely error'
-    
+
     else:
         return 'MV'
 
@@ -328,7 +323,7 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
             "allele1": row["allele1dad"],
             "allele2": row["allele2dad"]
         }
-        if np.all((row['depth_kid'] >= args.depth) & (row['depth_mom'
+        if ((row['depth_kid'] >= args.depth) & (row['depth_mom'
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
             row['mendelianstatus'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict, args)
