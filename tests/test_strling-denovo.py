@@ -103,10 +103,27 @@ def test_check_range(allele1, allele2, kidallele, expected):
 
     ({'allele1': 0, 'allele2': np.nan}, {'allele1': np.nan, 'allele2': 0},
     {'allele1': 3000, 'allele2': 150}, 'Double MV, likely error'),
+    # no kid alleles match a parent alllele
 
     ({'allele1': 20, 'allele2': 31.27}, {'allele1': 20.0, 'allele2': 88},
     {'allele1': 20, 'allele2': 36.26}, 'Full match'),
-    # THIS SHOULDN'T BE AN MV! NEITHER OF THE TWO ALLELES MATCH!!!
+    # checking minwiggle and different allele order, kid2 to mom2
+
+    ({'allele1': 0.0, 'allele2': 89.0}, {'allele1': 0.0, 'allele2': np.nan},
+    {'allele1': 0.0, 'allele2': 80}, 'Full match'),
+    # nan replaced  in dad and second allele matching with mom
+
+    ({'allele1': 4000, 'allele2': 600}, {'allele1': 350, 'allele2': 555},
+    {'allele1': 400, 'allele2': 1000}, 'Full match'),
+    # large alleles over threshold should match
+
+    ({'allele1': -1.0, 'allele2': np.nan}, {'allele1': -1.0, 'allele2': 90.92},
+    {'allele1': -1.0, 'allele2': 117.48}, 'MV'),
+    # close but no cigar, second allele outside of standard wiggle range
+
+    ({'allele1': 0, 'allele2': np.nan}, {'allele1': 0, 'allele2': 82.74},
+    {'allele1': 0, 'allele2': np.nan}, 'Full match'),
+    # ensuring allele check happens on kidalleledict
     ])
 
 def test_full_allele_check(mom_dict, dad_dict, kid_dict, expected):

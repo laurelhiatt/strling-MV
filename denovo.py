@@ -1,9 +1,12 @@
+# move comments in front!
+# allele check kid alleles!
+
+# these are the necessary modules for this code
 import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
 import peddy # must be in python version 3.7 for peddy to actually work
 import argparse
-# these are the necessary modules for this code
 
 def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
@@ -27,12 +30,13 @@ def get_args(args):
     parser.add_argument("--depth", type=int, default=15,
         help="depth filter (default: %(default)s)")
 
+        # size of de novo expansion, or difference from kid to mom/dad alleles
     parser.add_argument("--ampsize", type=int, default=150,
         help="amplification size filter (default: %(default)s)")
 
     parser.add_argument("--allelecutoff", type=float, default=350.0,
         help="cutoff for max allele size (default: %(default)s)")
-        # size of de novo expansion, or difference from kid to mom/dad alleles
+
     return parser.parse_args(args)
 
 # we are now going to define a bunch of functions, hurray!
@@ -217,6 +221,9 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
         return 'Missing alleles, ignore'
 
+    kidalleledict['allele1'], kidalleledict['allele2'] = allele_check(
+    kidalleledict['allele1'], kidalleledict['allele2'], args)
+
     kidallele1_matches_mom = check_range(momalleledict['allele1'],
                     momalleledict['allele2'], kidalleledict['allele1'], args)
     kidallele1_matches_dad = check_range(dadalleledict['allele1'],
@@ -268,26 +275,28 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
             Altered dataframe with full_allele_check strings for mendelianstatus
             column and True/False value for novel_amp (novel amplification)
     """
+    
+    # match the data frame to the samples of the individual or "kid"
     dfkid = df.loc[df['sample'] == kid]
-    #match the data frame to the samples of the individual or "kid"
     dfkid['mutation'] = mutation
+
+    # add a new column matched by sample mutation from mom and dad
     dfkid['mom'] = mom
     dfkid['dad'] = dad
-    #add a new column matched by sample mutation from mom and dad
 
+    # this is how we match our pedigree samples to our data frame samples
     dfmom = df.loc[df['sample'] == mom]
     dfdad = df.loc[df['sample'] == dad]
-    # this is how we match our pedigree samples to our data frame samples
 
-
+    # since we are comparing alleles from kid to parents,
+    # using depth as a filter, we need to distinguish alleles in the final df
     dfkid = dfkid.rename(columns={"allele1_est":"allele1kid",
                         "allele2_est":"allele2kid", "depth": "depth_kid"})
     dfdad = dfdad.rename(columns={"allele1_est":"allele1dad",
                         "allele2_est":"allele2dad", "depth": "depth_dad"})
     dfmom = dfmom.rename(columns={"allele1_est":"allele1mom",
                         "allele2_est":"allele2mom","depth": "depth_mom"})
-    # since we are comparing alleles from kid to parents,
-    # using depth as a filter, we need to distinguish alleles in the final df
+
 
     drop_from_dkid= ['spanning_reads', 'spanning_pairs', 'left_clips',
                     'right_clips', 'unplaced_pairs', 'sum_str_counts',
@@ -299,6 +308,7 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     for item in drop_from_parents:
         if item not in df.columns:
             not_in_df.append(item)
+
     # with different strling output, we will have different columns
     # so we want to make sure we avoid any codebreaking column drops
     for x in not_in_df:
@@ -312,8 +322,8 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     kiddad = dfkid.merge(dfdad, on= 'locus')
     kiddadmom = kiddad.merge(dfmom, on= 'locus')
 
+    # we are going to iterate row by row to create dictionaries
     for index, row in kiddadmom.iterrows():
-        # we are going to iterate row by row to create dictionaries
         kidalleledict = {}
         momalleledict = {}
         dadalleledict = {}
@@ -334,11 +344,16 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
             row['mendelianstatus'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict, args)
         else: row['mendelianstatus'] = 'under depth filter'
-        kiddadmom.at[index, 'mendelianstatus'] = row['mendelianstatus']
-        # we add our new column to the main data frame
-        kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
-        # drop any rows that didn't meet the depth filter
 
+        # we add our new column to the main data frame
+        kiddadmom.at[index, 'mendelianstatus'] = row['mendelianstatus']
+
+        # drop any rows that didn't meet the depth filter
+        kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
+
+        # we're going to test for amplifiication here based on a bp size,
+        # first we're taking the larger allele for both,
+        # which is generally allele2 but we're going to be careful regardless
         kiddadmom["allelecompkid"] = kiddadmom[["allele1kid",
                                         "allele2kid"]].max(axis=1)
         kiddadmom['allelecompkid'] = kiddadmom['allelecompkid'].replace(np.nan, 0)
@@ -348,26 +363,24 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         kiddadmom["allelecompdad"] = kiddadmom[["allele1dad",
                                         "allele2dad"]].max(axis=1)
         kiddadmom['allelecompdad'] = kiddadmom['allelecompdad'].replace(np.nan, 0)
-        # we're going to test for amplifiication here based on a bp size,
-        # first we're taking the larger allele for both,
-        # which is generally allele2 but we're going to be careful regardless
 
         kiddadmom['novel_amp'] = (kiddadmom['allelecompkid'
                                 ] - kiddadmom['allelecompdad'] >= args.ampsize
                                 ) & (kiddadmom['allelecompkid'] - kiddadmom[
                                             'allelecompmom'] >= args.ampsize)
-        # evaluating for novel amplifications based on the amp size cutoff
+        # after evaluating for novel amplifications based on the amp size cutoff
+
+        # drop the extra columns we don't need them
         kiddadmom = kiddadmom.drop(columns=['allelecompkid', 'allelecompmom',
                                     'allelecompdad'])
-        # drop the extra columns we don't need them
 
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
         writeHeader = False
 
+# this is basically an effort to have the header in the output file  once
     else:
         kiddadmom.to_csv(args.out, mode='a',sep='\t', header=False, index=False)
-    # this is basically an effort to have the header in the output file  once
 
     if hasattr(kiddadmom,  'mendelianstatus'):
         print(kiddadmom.mendelianstatus.value_counts(),
