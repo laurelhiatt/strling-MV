@@ -217,10 +217,14 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
         return 'Missing alleles, ignore'
 
-    kidallele1_matches_mom = check_range(momalleledict['allele1'], momalleledict['allele2'], kidalleledict['allele1'], args)
-    kidallele1_matches_dad = check_range(dadalleledict['allele1'], dadalleledict['allele2'], kidalleledict['allele1'], args)
-    kidallele2_matches_mom = check_range(momalleledict['allele1'], momalleledict['allele2'], kidalleledict['allele2'], args)
-    kidallele2_matches_dad = check_range(dadalleledict['allele1'], dadalleledict['allele2'], kidalleledict['allele2'], args)
+    kidallele1_matches_mom = check_range(momalleledict['allele1'],
+                    momalleledict['allele2'], kidalleledict['allele1'], args)
+    kidallele1_matches_dad = check_range(dadalleledict['allele1'],
+                    dadalleledict['allele2'], kidalleledict['allele1'], args)
+    kidallele2_matches_mom = check_range(momalleledict['allele1'],
+                    momalleledict['allele2'], kidalleledict['allele2'], args)
+    kidallele2_matches_dad = check_range(dadalleledict['allele1'],
+                    dadalleledict['allele2'], kidalleledict['allele2'], args)
 
 
     # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
@@ -231,7 +235,9 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     elif kidallele2_matches_mom and kidallele1_matches_dad:
         return 'Full match'
 
-    elif (kidallele1_matches_mom, kidallele1_matches_dad, kidallele2_matches_mom, kidallele2_matches_dad) == (False, False, False, False):
+    elif (kidallele1_matches_mom, kidallele1_matches_dad,
+                            kidallele2_matches_mom, kidallele2_matches_dad
+                                        ) == (False, False, False, False):
         return 'Double MV, likely error'
 
     else:
