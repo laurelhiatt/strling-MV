@@ -27,14 +27,14 @@ def get_args(args):
     parser.add_argument("--minwig", type = float or int, default = 10.0,
         help="minimum wiggle for small alleles (default: %(default)s)")
 
-    parser.add_argument("--depth", type = int, default = 15,
+    parser.add_argument("--depth", type = float or int, default = 15,
         help="depth filter (default: %(default)s)")
 
         # size of de novo expansion, or difference from kid to mom/dad alleles
-    parser.add_argument("--ampsize", type = int, default = 150,
+    parser.add_argument("--ampsize", type = float or int, default = 150,
         help="amplification size filter (default: %(default)s)")
 
-    parser.add_argument("--allelecutoff", type = float, default = 350.0,
+    parser.add_argument("--allelecutoff", type = float or int, default = 350.0,
         help="cutoff for max allele size (default: %(default)s)")
 
     return parser.parse_args(args)
