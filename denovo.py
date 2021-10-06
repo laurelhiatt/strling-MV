@@ -10,29 +10,32 @@ def get_args(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--outliers", required = True,
-        help="input outlier file name, STRling output")
+        help = "input outlier file name, STRling output")
 
     parser.add_argument("--ped", required = True,
-        help="input ped file to sort trios")
+        help = "input ped file to sort trios")
 
     parser.add_argument("--out",
-        help="output file name")
+        help = "output file name")
 
     parser.add_argument("--wiggle", type = float or int, default = 0.1,
-        help="b/w 0 and 1, establishes range for alleles (default:%(default)s)")
+        help = "b/w 0 and 1, establishes range for alleles (default:%(default)s)")
 
     parser.add_argument("--minwig", type = float or int, default = 10.0,
-        help="minimum wiggle for small alleles (default: %(default)s)")
+        help = "minimum wiggle for small alleles (default: %(default)s)")
 
     parser.add_argument("--depth", type = float or int, default = 15,
-        help="depth filter (default: %(default)s)")
+        help = "depth filter (default: %(default)s)")
 
         # size of de novo expansion, or difference from kid to mom/dad alleles
     parser.add_argument("--ampsize", type = float or int, default = 150,
-        help="amplification size filter (default: %(default)s)")
+        help = "amplification size filter (default: %(default)s)")
 
     parser.add_argument("--allelecutoff", type = float or int, default = 350.0,
-        help="cutoff for max allele size (default: %(default)s)")
+        help = "cutoff for max allele size (default: %(default)s)")
+
+    parser.add_argument("--includeDMV", type = str, default = 'No',
+        help = "whether to include amps for double MVs (default: %(default)s)")
 
     return parser.parse_args(args)
 
@@ -185,7 +188,7 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     if (np.isnan(kidalleledict['allele1']) & np.isnan(kidalleledict['allele2'])) or (
             np.isnan(momalleledict['allele1']) & np.isnan(momalleledict['allele2'])) or (
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
-        return 'Missing alleles, ignore'
+        return 'Missing alleles, ignore', False
 
     kidalleledict['allele1'], kidalleledict['allele2'] = allele_check(
     kidalleledict['allele1'], kidalleledict['allele2'], args)
@@ -205,22 +208,30 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     kidallele2_matches_dad = check_range(dadalleledict['allele1'],
                     dadalleledict['allele2'], kidalleledict['allele2'], args)
 
-
     # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
     if kidallele1_matches_mom and kidallele2_matches_dad:
-        return 'Full match'
+        return 'Full match', False
 
     # allele 2 matches mom and allele 1 matches dad
     elif kidallele2_matches_mom and kidallele1_matches_dad:
-        return 'Full match'
+        return 'Full match', False
 
     elif (kidallele1_matches_mom, kidallele1_matches_dad,
                             kidallele2_matches_mom, kidallele2_matches_dad
                                         ) == (False, False, False, False):
-        return 'Double MV, likely error'
+        if args.includeDMV == 'Yes':
+            return 'Double MV, likely error', True
+        elif args.includeDMV == 'No':
+            return 'Double MV, likely error', False
+        else:
+            raise ValueError('IncludeDMV argument must be exact')
 
     else:
-        return 'MV'
+        if (kidalleledict['compallele'] - dadalleledict['compallele'] >= args.ampsize
+            ) & (kidalleledict['compallele'] - momalleledict['compallele'] >= args.ampsize):
+            return 'MV', True
+        else:
+            return 'MV', False
 
 def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that has
@@ -297,50 +308,36 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         dadalleledict = {}
         kidalleledict = {
             "allele1": row["allele1kid"],
-            "allele2": row["allele2kid"]
+            "allele2": row["allele2kid"],
+            "compallele": max(row["allele1kid"], row["allele2kid"])
         }
+
         momalleledict = {
             "allele1": row["allele1mom"],
-            "allele2": row["allele2mom"]
+            "allele2": row["allele2mom"],
+            "compallele": max(row["allele1mom"], row["allele2mom"])
         }
+
         dadalleledict = {
             "allele1": row["allele1dad"],
-            "allele2": row["allele2dad"]
+            "allele2": row["allele2dad"],
+            "compallele": max(row["allele1dad"], row["allele2dad"])
         }
+
         if ((row['depth_kid'] >= args.depth) & (row['depth_mom'
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
-            row['mendelianstatus'] = full_allele_check(
+            row['mendelianstatus'], row['novel_amp'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict, args)
-        else: row['mendelianstatus'] = 'under depth filter'
+        else:
+            row['mendelianstatus'] = 'under depth filter'
+            row['novel_amp'] = 'under depth filter'
 
         # we add our new column to the main data frame
         kiddadmom.at[index, 'mendelianstatus'] = row['mendelianstatus']
+        kiddadmom.at[index, 'novel_amp'] = row['novel_amp']
 
         # drop any rows that didn't meet the depth filter
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
-
-        # we're going to test for amplifiication here based on a bp size,
-        # first we're taking the larger allele for both,
-        # which is generally allele2 but we're going to be careful regardless
-        kiddadmom["allelecompkid"] = kiddadmom[["allele1kid",
-                                        "allele2kid"]].max(axis=1)
-        kiddadmom['allelecompkid'] = kiddadmom['allelecompkid'].replace(np.nan, 0)
-        kiddadmom["allelecompmom"] = kiddadmom[["allele1mom",
-                                        "allele2mom"]].max(axis=1)
-        kiddadmom['allelecompmom'] = kiddadmom['allelecompmom'].replace(np.nan, 0)
-        kiddadmom["allelecompdad"] = kiddadmom[["allele1dad",
-                                        "allele2dad"]].max(axis=1)
-        kiddadmom['allelecompdad'] = kiddadmom['allelecompdad'].replace(np.nan, 0)
-
-        kiddadmom['novel_amp'] = (kiddadmom['allelecompkid'
-                                ] - kiddadmom['allelecompdad'] >= args.ampsize
-                                ) & (kiddadmom['allelecompkid'] - kiddadmom[
-                                            'allelecompmom'] >= args.ampsize)
-        # after evaluating for novel amplifications based on the amp size cutoff
-
-        # drop the extra columns we don't need them
-        kiddadmom = kiddadmom.drop(columns=['allelecompkid', 'allelecompmom',
-                                    'allelecompdad'])
 
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
