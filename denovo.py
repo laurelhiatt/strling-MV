@@ -1,6 +1,3 @@
-# move comments in front!
-# allele check kid alleles!
-
 # these are the necessary modules for this code
 import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -43,10 +40,8 @@ def get_args(args):
 def has_parents(sample):
     """Here we perform a check to determine if Peddy sample has both
     parents in ped file to form trio.
-
     Parameters:
         sample (int): sample ID taken from ped file to determine trios
-
     Returns:
     (bool)
             True if trio exists and both parents are present
@@ -61,11 +56,9 @@ def allele_check(allele1, allele2, args):
     trio are functional for analysis: a NaN allele will take the other allele's
     value, and any allele that is greater than the allelecutoff will be set to
     that value
-
     Parameters:
         allele1, allele 2 (float): the two alleles taken from an individual,
         where allele1 is the smaller allele and allele2 is the larger (generally)
-
     Returns: allele1, allele2 (float): standardized alleles
     """
 
@@ -104,11 +97,9 @@ def wiggle(allele, args):
     measurement/evaluation of alleles as determined by the wiggle
     (proportion to be +/- based on allele) and minwiggle, the minimum set wiggle
     to an allele
-
     Parameters:
         allele (float): an allele taken from STRling input, each allele will be
         taken from each member of a trio
-
     Returns:
             (a, b) (tuple): the parent allele range to match a kid allele
     """
@@ -129,10 +120,8 @@ def wiggle(allele, args):
 def allele_range(allele1, allele2, args):
     """Here we generate the allele ranges for both alleles from a parent using
     the other function wiggle
-
     Parameters:
         allele1, allele2(float): two alleles from a parent
-
     Returns:
         tpl1, tple2 (tuples): the two ranges, one tuple per allele
     """
@@ -143,41 +132,20 @@ def allele_range(allele1, allele2, args):
     return a1_range, a2_range
 
 
-def get_allele_ranges(allele1, allele2, args):
-    """This function combines the previously defined functions allele_check and
-    allele_range in order to standardize alleles and then generate their tuple
-    ranges based on that. Thus, this function gets final allele ranges for each
-    parent
-
-    Parameters:
-        allele1, allele2 (float): the two alleles from a parent
-
-    Returns:
-        (a,b), (c,d) (tuple): two allele ranges for a parent's two alleles
-    """
-
-    a1, a2 = allele_check(allele1, allele2, args)
-    a1_range, a2_range = (allele_range(a1, a2, args))
-
-    return a1_range, a2_range
-
 def check_range(allele1, allele2, kidallele, args):
     """Here we compare a kid allele to the parental alleles, which are run
     through the get_allele_ranges function to generate the final allele ranges.
-
     There are various returned values in case we wish to capture this output
     later, that can be easily added to the output file
-
     Parameters:
         allele1, allele2 (float): the two alleles of a parent
         kidallele (float): kid's allele being compared to the parental alleles
-
     Return:
         bool:
             True if there is a match between kid and parent, otherwise, False
     """
 
-    a1_range, a2_range = get_allele_ranges(allele1, allele2, args)
+    a1_range, a2_range = allele_range(allele1, allele2, args)
     a1_low, a1_high = a1_range
     a2_low, a2_high = a2_range
 
@@ -199,12 +167,10 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     trio to make sure we have sufficient alleles to run the comparison, and then
     if we do, we compare the kid alleles to the parent alleles in an order that
     determines the Mendelian status of the offspring (more info in returns)
-
     Parameters:
         momalleledict (dictionary): dictionary of mom's 2 alleles
         dadalleledict (dictionary): dictionary of dad's 2 alleles
         kidalleledict (dictionary): dictionary of kid's 2 alleles
-
     Returns:
             'Missing alleles, ignore' (str): If both alleles are NaN for any
             member of the trio, then we ignore the comparison
@@ -223,6 +189,12 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
 
     kidalleledict['allele1'], kidalleledict['allele2'] = allele_check(
     kidalleledict['allele1'], kidalleledict['allele2'], args)
+
+    momalleledict['allele1'], momalleledict['allele2'] = allele_check(
+    momalleledict['allele1'], momalleledict['allele2'], args)
+
+    dadalleledict['allele1'], dadalleledict['allele2'] = allele_check(
+    dadalleledict['allele1'], dadalleledict['allele2'], args)
 
     kidallele1_matches_mom = check_range(momalleledict['allele1'],
                     momalleledict['allele2'], kidalleledict['allele1'], args)
@@ -256,13 +228,10 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     full match to parents, has one Mendelian violation, etc.) as well as
     whether the kid has an amplification  (set by the argumpent ampsize)
     compared to both parents.
-
     Only trios where all three members' loci pass a depth filter will
     have information reported.
-
     This function is also responsible for printing the Mendelian status value
     count and the novel amplification count per sample.
-
     Parameters:
         df (dataframe): dataframe of STRling outlier data
         kid (str): sample ID for kid
@@ -270,7 +239,6 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         dad (str): sample ID for dad
         mutation (str): mutation implicated in trio
         writeHeader (boolean): adds header to beginning of file, once
-
     Returns:
             Altered dataframe with full_allele_check strings for mendelianstatus
             column and True/False value for novel_amp (novel amplification)
