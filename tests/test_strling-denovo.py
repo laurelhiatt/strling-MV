@@ -48,27 +48,6 @@ def test_wiggle(allele, expected):
 def test_allele_range(allele1, allele2, expected):
     assert allele_range(allele1, allele2, args) == expected
 
-
-@pytest.mark.parametrize("allele1, allele2, expected", [
-    (100, 100, ((90, 110.00000000000001), (90, 110.00000000000001))),
-    # same alleles get same ranges
-    (0, 100, ((-10, 10), (90, 110.00000000000001))),
-    # different alelles get different ranges, with minwig included
-    (np.nan, 100, ((90, 110.00000000000001), (90, 110.00000000000001))),
-    # nan is replaced with the other alelle to generate
-    (4, np.nan, ((-6, 14), (-6, 14))),
-    # other nan is replaced, small alelle uses minwig
-    (100, 450, ((90, 110.00000000000001), (315, 385.00000000000006))),
-    # large allele "checked" before range generated
-    (np.nan, 500, ((315, 385.00000000000006), (315, 385.00000000000006))),
-    # large alelle checked and replaces nan
-    ])
-
-
-def test_get_allele_ranges(allele1, allele2, expected):
-    assert get_allele_ranges(allele1, allele2, args) == expected
-
-
 @pytest.mark.parametrize("allele1, allele2, kidallele, expected", [
     (100, 100, 100, True), # kidallele matching parent allele returns True
     (np.nan, 100, 100, True), # nan allele doesn't change match
@@ -86,43 +65,47 @@ def test_check_range(allele1, allele2, kidallele, expected):
 
 @pytest.mark.parametrize("mom_dict, dad_dict, kid_dict, expected", [
     ({'allele1': 150, 'allele2': 150}, {'allele1': 150, 'allele2': 150},
-    {'allele1': 150, 'allele2': 150}, 'Full match'),
+    {'allele1': 150, 'allele2': 150}, ('Full match', False)),
     # exact allele match across the board, should work
 
     ({'allele1': 3000, 'allele2': 150}, {'allele1': 150, 'allele2': 150},
-    {'allele1': 150, 'allele2': 450}, 'Full match'),
+    {'allele1': 150, 'allele2': 450}, ('Full match', False)),
     # match with large alleles
 
     ({'allele1': 150, 'allele2': 150}, {'allele1': 150, 'allele2': 150},
-    {'allele1': 160, 'allele2': 140}, 'Full match'),
+    {'allele1': 160, 'allele2': 140}, ('Full match', False)),
     # match within range, non-exact alleles
 
     ({'allele1': np.nan, 'allele2': np.nan}, {'allele1': 150, 'allele2': 150},
-    {'allele1': 150, 'allele2': 150}, 'Missing alleles, ignore'),
+    {'allele1': 150, 'allele2': 150}, ('Missing alleles, ignore', False)),
     #ensure missing alleles are ignored
 
     ({'allele1': 0, 'allele2': np.nan}, {'allele1': np.nan, 'allele2': 0},
-    {'allele1': 3000, 'allele2': 150}, 'Double MV, likely error'),
-    # no kid alleles match a parent alllele
+    {'allele1': 3000, 'allele2': 150}, ('Double MV, likely error', False)),
+    # no kid alleles match a parent alllele, not an amp from DMV default
 
     ({'allele1': 20, 'allele2': 31.27}, {'allele1': 20.0, 'allele2': 88},
-    {'allele1': 20, 'allele2': 36.26}, 'Full match'),
+    {'allele1': 20, 'allele2': 36.26}, ('Full match', False)),
     # checking minwiggle and different allele order, kid2 to mom2
 
     ({'allele1': 0.0, 'allele2': 89.0}, {'allele1': 0.0, 'allele2': np.nan},
-    {'allele1': 0.0, 'allele2': 80}, 'Full match'),
+    {'allele1': 0.0, 'allele2': 80}, ('Full match', False)),
     # nan replaced  in dad and second allele matching with mom
 
     ({'allele1': 4000, 'allele2': 600}, {'allele1': 350, 'allele2': 555},
-    {'allele1': 400, 'allele2': 1000}, 'Full match'),
+    {'allele1': 400, 'allele2': 1000}, ('Full match', False)),
     # large alleles over threshold should match
 
     ({'allele1': -1.0, 'allele2': np.nan}, {'allele1': -1.0, 'allele2': 90.92},
-    {'allele1': -1.0, 'allele2': 117.48}, 'MV'),
+    {'allele1': -1.0, 'allele2': 117.48}, ('MV', False)),
     # close but no cigar, second allele outside of standard wiggle range
 
+    ({'allele1': -1.0, 'allele2': np.nan}, {'allele1': -1.0, 'allele2': 90.92},
+    {'allele1': -1.0, 'allele2': 300}, ('MV', True)),
+    # Amplificatioin of this MV is true
+
     ({'allele1': 0, 'allele2': np.nan}, {'allele1': 0, 'allele2': 82.74},
-    {'allele1': 0, 'allele2': np.nan}, 'Full match'),
+    {'allele1': 0, 'allele2': np.nan}, ('Full match', False)),
     # ensuring allele check happens on kidalleledict
     ])
 
