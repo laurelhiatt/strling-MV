@@ -123,8 +123,10 @@ def wiggle(allele, args):
 def allele_range(allele1, allele2, args):
     """Here we generate the allele ranges for both alleles from a parent using
     the other function wiggle
+
     Parameters:
         allele1, allele2(float): two alleles from a parent
+
     Returns:
         tpl1, tple2 (tuples): the two ranges, one tuple per allele
     """
@@ -140,9 +142,11 @@ def check_range(allele1, allele2, kidallele, args):
     through the get_allele_ranges function to generate the final allele ranges.
     There are various returned values in case we wish to capture this output
     later, that can be easily added to the output file
+
     Parameters:
         allele1, allele2 (float): the two alleles of a parent
         kidallele (float): kid's allele being compared to the parental alleles
+
     Return:
         bool:
             True if there is a match between kid and parent, otherwise, False
@@ -170,10 +174,12 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     trio to make sure we have sufficient alleles to run the comparison, and then
     if we do, we compare the kid alleles to the parent alleles in an order that
     determines the Mendelian status of the offspring (more info in returns)
+
     Parameters:
         momalleledict (dictionary): dictionary of mom's 2 alleles
         dadalleledict (dictionary): dictionary of dad's 2 alleles
         kidalleledict (dictionary): dictionary of kid's 2 alleles
+
     Returns:
             'Missing alleles, ignore' (str): If both alleles are NaN for any
             member of the trio, then we ignore the comparison
@@ -189,6 +195,10 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             np.isnan(momalleledict['allele1']) & np.isnan(momalleledict['allele2'])) or (
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
         return 'Missing alleles, ignore', False
+
+    kidalleledict["compallele"] = max(kidalleledict['allele1'], kidalleledict['allele2'])
+    momalleledict["compallele"] = max(momalleledict['allele1'], momalleledict['allele2'])
+    dadalleledict["compallele"] = max(dadalleledict['allele1'], dadalleledict['allele2'])
 
     kidalleledict['allele1'], kidalleledict['allele2'] = allele_check(
     kidalleledict['allele1'], kidalleledict['allele2'], args)
@@ -309,19 +319,16 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         kidalleledict = {
             "allele1": row["allele1kid"],
             "allele2": row["allele2kid"],
-            "compallele": max(row["allele1kid"], row["allele2kid"])
         }
 
         momalleledict = {
             "allele1": row["allele1mom"],
             "allele2": row["allele2mom"],
-            "compallele": max(row["allele1mom"], row["allele2mom"])
         }
 
         dadalleledict = {
             "allele1": row["allele1dad"],
             "allele2": row["allele2dad"],
-            "compallele": max(row["allele1dad"], row["allele2dad"])
         }
 
         if ((row['depth_kid'] >= args.depth) & (row['depth_mom'
