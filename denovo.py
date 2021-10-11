@@ -5,6 +5,16 @@ import numpy as np
 import peddy # must be in python version 3.7 for peddy to work
 import argparse
 
+
+def closest(lst, allele):
+    """" this returns the closest value from a list to an input value (K) """
+    return lst[min(range(len(lst)), key = lambda i: abs(lst[i]-allele))]
+
+def allele_diff(lst, allele):
+""""Taking the absolute difference from the closest value from a list,
+    lst is a list and K is an allele (float) """
+    return abs(K - (closest(lst, allele)))
+
 def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
     parser = argparse.ArgumentParser()
@@ -211,38 +221,48 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     if (np.isnan(kidalleledict['allele1']) & np.isnan(kidalleledict['allele2'])) or (
             np.isnan(momalleledict['allele1']) & np.isnan(momalleledict['allele2'])) or (
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
-        return 'Missing alleles, ignore', False
+        return 'Missing alleles, ignore', False, np.nan, np.nan
 
     # taking max allele to assess existence of amplification over threshold
     kidalleledict["compallele"] = max(kidalleledict['allele1'], kidalleledict['allele2'])
     momalleledict["compallele"] = max(momalleledict['allele1'], momalleledict['allele2'])
     dadalleledict["compallele"] = max(dadalleledict['allele1'], dadalleledict['allele2'])
 
-    kidalleledict['allele1'], kidalleledict['allele2'] = allele_check(
+    kidalleledict['allele1_std'], kidalleledict['allele2_std'] = allele_check(
     kidalleledict['allele1'], kidalleledict['allele2'], args)
 
-    momalleledict['allele1'], momalleledict['allele2'] = allele_check(
+    momalleledict['allele1_std'], momalleledict['allele2_std'] = allele_check(
     momalleledict['allele1'], momalleledict['allele2'], args)
 
-    dadalleledict['allele1'], dadalleledict['allele2'] = allele_check(
+    dadalleledict['allele1_std'], dadalleledict['allele2_std'] = allele_check(
     dadalleledict['allele1'], dadalleledict['allele2'], args)
 
-    kidallele1_matches_mom = check_range(momalleledict['allele1'],
-                    momalleledict['allele2'], kidalleledict['allele1'], args)
-    kidallele1_matches_dad = check_range(dadalleledict['allele1'],
-                    dadalleledict['allele2'], kidalleledict['allele1'], args)
-    kidallele2_matches_mom = check_range(momalleledict['allele1'],
-                    momalleledict['allele2'], kidalleledict['allele2'], args)
-    kidallele2_matches_dad = check_range(dadalleledict['allele1'],
-                    dadalleledict['allele2'], kidalleledict['allele2'], args)
+    kidallele1_matches_mom = check_range(momalleledict['allele1_std'],
+                    momalleledict['allele2_std'], kidalleledict['allele1_std'], args)
+    kidallele1_matches_dad = check_range(dadalleledict['allele1_std'],
+                    dadalleledict['allele2_std'], kidalleledict['allele1_std'], args)
+    kidallele2_matches_mom = check_range(momalleledict['allele1_std'],
+                    momalleledict['allele2_std'], kidalleledict['allele2_std'], args)
+    kidallele2_matches_dad = check_range(dadalleledict['allele1_std'],
+                    dadalleledict['allele2_std'], kidalleledict['allele2_std'], args)
+
+    allele1diff = np.NaN
+    allele2diff = np.NaN
+    lstmom = [momalleledict['allele1'], momalleledict['allele2']]
+    lstdad = [dadalleledict['allele1'], dadalleledict['allele2']]
+    biglst = lstmom + lstdad
 
     # kid allele 1 matches mom, kid allele 2 matches dad, we're golden
     if kidallele1_matches_mom and kidallele2_matches_dad:
-        return 'Full match', False
+        allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
+        allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
+        return 'Full match', False, allele1diff, allele2diff
 
     # allele 2 matches mom and allele 1 matches dad
     elif kidallele2_matches_mom and kidallele1_matches_dad:
-        return 'Full match', False
+        allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
+        allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
+        return 'Full match', False, allele1diff, allele2diff
 
     elif (kidallele1_matches_mom, kidallele1_matches_dad,
                             kidallele2_matches_mom, kidallele2_matches_dad
@@ -250,21 +270,60 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
         if args.includeDMV == 'Yes':
             if (kidalleledict['compallele'] - dadalleledict['compallele'] >= args.ampsize
                 ) & (kidalleledict['compallele'] - momalleledict['compallele'] >= args.ampsize):
-                return 'Double MV, likely error', True
+                closeallele2 = closest(biglst, kidalleledict['allele2'])
+                if closeallele2 in lstmom:
+                    allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
+                    allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
+                else:
+                    allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
+                    allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
+                return 'Double MV, likely error', True, allele1diff, allele2diff
+
             else:
-                return 'Double MV, likely error', False
+                closeallele2 = closest(biglst, kidalleledict['allele2'])
+                if closeallele2 in lstmom:
+                    allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
+                    allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
+                else:
+                    allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
+                    allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
+                return 'Double MV, likely error', False, allele1diff, allele2diff
 
         elif args.includeDMV == 'No':
-            return 'Double MV, likely error', False
+            closeallele2 = closest(biglst, kidalleledict['allele2'])
+            if closeallele2 in lstmom:
+                allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
+                allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
+            else:
+                allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
+                allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
+
+            return 'Double MV, likely error', False, allele1diff, allele2diff
         else:
             raise ValueError('IncludeDMV argument must be exact')
 
     else:
         if (kidalleledict['compallele'] - dadalleledict['compallele'] >= args.ampsize
             ) & (kidalleledict['compallele'] - momalleledict['compallele'] >= args.ampsize):
-            return 'MV', True
+            closeallele2 = closest(biglst, kidalleledict['allele2'])
+            if closeallele2 in lstmom:
+                allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
+                allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
+            else:
+                allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
+                allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
+            return 'MV', True, allele1diff, allele2diff
+
+
         else:
-            return 'MV', False
+            closeallele2 = closest(biglst, kidalleledict['allele1'])
+            if closeallele2 in lstmom:
+                allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
+                allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
+            else:
+                allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
+                allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
+            return 'MV', False, allele1diff, allele2diff
 
 def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     """Generate .tsv file(s) with pedigree input and STRling data that has
@@ -358,15 +417,19 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
 
         if ((row['depth_kid'] >= args.depth) & (row['depth_mom'
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
-            row['mendelianstatus'], row['novel_amp'] = full_allele_check(
+            row['mendelianstatus'], row['novel_amp'], row['allele1diff'], row['allele2diff'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict, args)
         else:
             row['mendelianstatus'] = 'under depth filter'
             row['novel_amp'] = 'under depth filter'
+            row['allele1diff'] = np.nan
+            row['allele2diff'] = np.nan
 
         # we add our new column to the main data frame
         kiddadmom.at[index, 'mendelianstatus'] = row['mendelianstatus']
         kiddadmom.at[index, 'novel_amp'] = row['novel_amp']
+        kiddadmom.at[index, 'allele1diff'] = row['allele1diff']
+        kiddadmom.at[index, 'allele2diff'] = row['allele2diff']
 
         # drop any rows that didn't meet the depth filter
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
