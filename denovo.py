@@ -11,9 +11,9 @@ def closest(lst, allele):
     return lst[min(range(len(lst)), key = lambda i: abs(lst[i]-allele))]
 
 def allele_diff(lst, allele):
-""""Taking the absolute difference from the closest value from a list,
+    """"Taking the absolute difference from the closest value from a list,
     lst is a list and K is an allele (float) """
-    return abs(K - (closest(lst, allele)))
+    return abs(allele - (closest(lst, allele)))
 
 def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
@@ -246,8 +246,6 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     kidallele2_matches_dad = check_range(dadalleledict['allele1_std'],
                     dadalleledict['allele2_std'], kidalleledict['allele2_std'], args)
 
-    allele1diff = np.NaN
-    allele2diff = np.NaN
     lstmom = [momalleledict['allele1'], momalleledict['allele2']]
     lstdad = [dadalleledict['allele1'], dadalleledict['allele2']]
     biglst = lstmom + lstdad
