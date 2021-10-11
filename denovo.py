@@ -379,9 +379,10 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     else:
         kiddadmom.to_csv(args.out, mode='a',sep='\t', header=False, index=False)
 
-    if hasattr(kiddadmom,  'mendelianstatus'):
-        print(kiddadmom.mendelianstatus.value_counts(),
-                        kiddadmom.novel_amp.value_counts(), kid)
+    if hasattr(kiddadmom, 'mendelianstatus'):
+        print('Mendelian status and novel amp counts for', kid)
+        print(kiddadmom.mendelianstatus.value_counts())
+        print(kiddadmom.novel_amp.value_counts())
     else:
         pass
     #my_small_df = (kiddadmom, 'Kid, mom, and dad sample IDs are', kid, mom, dad)
@@ -414,7 +415,7 @@ def get_denovos(args):
 
             strlingMV(df, sample.sample_id, sample.maternal_id,
                     sample.paternal_id, mutation, args, writeHeader)
-                    
+
             writeHeader = False #don't want to keep writing header
 
 if __name__ == "__main__":
