@@ -5,7 +5,7 @@ import pytest
 import argparse
 import numpy as np
 
-args = get_args(['--outliers', 'test.tsv', '--ped', 'test.ped'])
+args = get_args(['--outliers', 'test.tsv', '--ped', 'test.ped', '--out', 'testout.tsv'])
 # additional args set with default values
 
 @pytest.mark.parametrize("allele1, allele2, expected", [

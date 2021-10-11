@@ -2,7 +2,7 @@
 import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
-import peddy # must be in python version 3.7 for peddy to actually work
+import peddy # must be in python version 3.7 for peddy to work
 import argparse
 
 def get_args(args):
@@ -15,7 +15,7 @@ def get_args(args):
     parser.add_argument("--ped", required = True,
         help = "input ped file to sort trios")
 
-    parser.add_argument("--out",
+    parser.add_argument("--out", required = True,
         help = "output file name")
 
     parser.add_argument("--wiggle", type = float or int, default = 0.1,
@@ -43,8 +43,10 @@ def get_args(args):
 def has_parents(sample):
     """Here we perform a check to determine if Peddy sample has both
     parents in ped file to form trio.
+
     Parameters:
         sample (int): sample ID taken from ped file to determine trios
+
     Returns:
     (bool)
             True if trio exists and both parents are present
@@ -58,12 +60,13 @@ def allele_check(allele1, allele2, args):
     """The allele check ensures that an allele pair taken from a member of the
     trio are functional for analysis: a NaN allele will take the other allele's
     value, and any allele that is greater than the allelecutoff will be set to
-    that value
+    that value.
+
     Parameters:
-        allele1, allele 2 (float): the two alleles taken from an individual,
-        where allele1 is the smaller allele and allele2 is the larger (generally)
-    Returns: allele1, allele2 (float): standardized alleles
-    """
+        allele1, allele2 (float): two alleles taken from an individual,
+        where generally allele1 is the smaller allele and allele2 is the larger
+
+    Returns: allele1, allele2 (float): standardized alleles"""
 
     if (not np.isnan(allele1)) & np.isnan(allele2):
         if (allele1 >= args.allelecutoff):
@@ -99,18 +102,19 @@ def wiggle(allele, args):
     """This function establishes a range per allele to account for error in
     measurement/evaluation of alleles as determined by the wiggle
     (proportion to be +/- based on allele) and minwiggle, the minimum set wiggle
-    to an allele
+    to an allele.
+
     Parameters:
-        allele (float): an allele taken from STRling input, each allele will be
-        taken from each member of a trio
+        allele (float): an allele taken from STRling input, both alleles will be
+        taken from each parent
+
     Returns:
-            (a, b) (tuple): the parent allele range to match a kid allele
-    """
+            (a1, a2) (tuple): the parent allele range to match a kid allele"""
 
     if (args.wiggle > 1.0) or (args.wiggle < 0.0):
         raise ValueError('wiggle proportion must be a value between 0 and 1')
 
-    elif allele*(args.wiggle) < args.minwig:
+    elif allele * (args.wiggle) < args.minwig:
          (a1, a2) = (allele - args.minwig, allele + args.minwig)
 
     else:
@@ -122,14 +126,13 @@ def wiggle(allele, args):
 
 def allele_range(allele1, allele2, args):
     """Here we generate the allele ranges for both alleles from a parent using
-    the other function wiggle
+    the other function wiggle.
 
     Parameters:
-        allele1, allele2(float): two alleles from a parent
+        allele1, allele2 (float): two alleles from a parent
 
     Returns:
-        tpl1, tple2 (tuples): the two ranges, one tuple per allele
-    """
+        a1_range, a2_range (tuples): the two ranges, one tuple per allele"""
 
     a1_range = wiggle(allele1, args)
     a2_range = wiggle(allele2, args)
@@ -149,8 +152,8 @@ def check_range(allele1, allele2, kidallele, args):
 
     Return:
         bool:
-            True if there is a match between kid and parent, otherwise, False
-    """
+            True if there is a match between kid and parent
+            False, otherwise"""
 
     a1_range, a2_range = allele_range(allele1, allele2, args)
     a1_low, a1_high = a1_range
@@ -170,10 +173,13 @@ def check_range(allele1, allele2, kidallele, args):
             return False #'Amplification'
 
 def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
-    """This is the final kit'n'kaboodle for the script: here, we evalaute the
+    """This is the final kit'n'kaboodle for the script: here, we evaluate the
     trio to make sure we have sufficient alleles to run the comparison, and then
-    if we do, we compare the kid alleles to the parent alleles in an order that
-    determines the Mendelian status of the offspring (more info in returns)
+    if we do, we standardize all alleles and compare the kid alleles to the
+    parent alleles in an order that determines Mendelian status.
+
+    Additionally, this part of the code assesses for an offspring
+    amplification based on ampsize.
 
     Parameters:
         momalleledict (dictionary): dictionary of mom's 2 alleles
@@ -183,12 +189,23 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     Returns:
             'Missing alleles, ignore' (str): If both alleles are NaN for any
             member of the trio, then we ignore the comparison
+
             'Full match' (str): If there is a match from one kid allele to mom
             and the other kid allele to dad, we get a full match
+
             'MV' (str): If there is only match from a kid allele to a parent,
             we get a Mendelian violation  or MV
-            'Double MV, likely error' (str):
-    """
+
+            'Double MV, likely error' (str): If neither allele matches there is
+            a double Mendelian violation
+
+            +
+
+            Bool:
+                True if the difference between largest allele is > ampsize
+                for kid compared to both parents in an MV, OR in a double MV
+                if includeDMV is set to Yes
+                False in all other cases"""
 
     # if any of the trio has both missing alleles, then we are out of there
     if (np.isnan(kidalleledict['allele1']) & np.isnan(kidalleledict['allele2'])) or (
@@ -196,6 +213,7 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
         return 'Missing alleles, ignore', False
 
+    # taking max allele to assess existence of amplification over threshold
     kidalleledict["compallele"] = max(kidalleledict['allele1'], kidalleledict['allele2'])
     momalleledict["compallele"] = max(momalleledict['allele1'], momalleledict['allele2'])
     dadalleledict["compallele"] = max(dadalleledict['allele1'], dadalleledict['allele2'])
@@ -230,7 +248,12 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
                             kidallele2_matches_mom, kidallele2_matches_dad
                                         ) == (False, False, False, False):
         if args.includeDMV == 'Yes':
-            return 'Double MV, likely error', True
+            if (kidalleledict['compallele'] - dadalleledict['compallele'] >= args.ampsize
+                ) & (kidalleledict['compallele'] - momalleledict['compallele'] >= args.ampsize):
+                return 'Double MV, likely error', True
+            else:
+                return 'Double MV, likely error', False
+
         elif args.includeDMV == 'No':
             return 'Double MV, likely error', False
         else:
@@ -249,10 +272,12 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     full match to parents, has one Mendelian violation, etc.) as well as
     whether the kid has an amplification  (set by the argumpent ampsize)
     compared to both parents.
+
     Only trios where all three members' loci pass a depth filter will
     have information reported.
     This function is also responsible for printing the Mendelian status value
     count and the novel amplification count per sample.
+
     Parameters:
         df (dataframe): dataframe of STRling outlier data
         kid (str): sample ID for kid
@@ -260,10 +285,10 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         dad (str): sample ID for dad
         mutation (str): mutation implicated in trio
         writeHeader (boolean): adds header to beginning of file, once
+
     Returns:
             Altered dataframe with full_allele_check strings for mendelianstatus
-            column and True/False value for novel_amp (novel amplification)
-    """
+            column and True/False value for novel_amp (novel amplification)"""
 
     # match the data frame to the samples of the individual or "kid"
     dfkid = df.loc[df['sample'] == kid]
@@ -363,17 +388,18 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     return #my_small_df if I want the dataframe as an object
 
 def get_denovos(args):
-    """
-    Tying it all together: here we import the files we need from their arguments,
+    """Tying it all together: here we import the files we need from their arguments,
     and set up the strlingMV function to run on every sample that is the kid of
-    a trio.
-    """
+    a trio."""
+
     df = pd.read_table(args.outliers, delim_whitespace = True,
                         dtype = {'sample' : str}, index_col = False)
     ped = peddy.Ped(args.ped, 'Paternal_ID' == str, )
+
     with open(args.out, 'w') as newfile:
             pass
     writeHeader = True
+
     for sample in ped.samples():
         if has_parents(sample):
             if sample.mom.phenotype != '0':
@@ -385,8 +411,10 @@ def get_denovos(args):
                 # supply mutation from mom and dad in pedigree
                 #mom will override dad if both are non-zero
                 # this could be a problem...
+
             strlingMV(df, sample.sample_id, sample.maternal_id,
                     sample.paternal_id, mutation, args, writeHeader)
+                    
             writeHeader = False #don't want to keep writing header
 
 if __name__ == "__main__":
