@@ -4,16 +4,36 @@ pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
 import peddy # must be in python version 3.7 for peddy to work
 import argparse
-
+import time
+start_time = time.time()
 
 def closest(lst, allele):
-    """" this returns the closest value from a list to an input value (K) """
-    return lst[min(range(len(lst)), key = lambda i: abs(lst[i]-allele))]
+    """"This returns the closest value from a list to an input value (allele)
+
+    Parameters:
+        lst (list): a list of values, matching alleles of parent(s)
+        allele (float): a value, specifically an allele size
+
+    Returns:
+        (float) The value from the list closest to the input value"""
+
+    closeallele = lst[min(range(len(lst)), key = lambda i: abs(lst[i]-allele))]
+
+    return closeallele
 
 def allele_diff(lst, allele):
-    """"Taking the absolute difference from the closest value from a list,
-    lst is a list and K is an allele (float) """
-    return abs(allele - (closest(lst, allele)))
+    """"Taking the absolute difference from the closest value from a list
+
+    Parameters:
+        lst (list): a list of values
+        allele (float): a value
+
+    Returns:
+        (float): the difference between alleles"""
+
+    allelediff = abs(allele - (closest(lst, allele)))
+
+    return allelediff
 
 def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
@@ -46,6 +66,9 @@ def get_args(args):
 
     parser.add_argument("--includeDMV", type = str, default = 'No',
         help = "whether to include amps for double MVs (default: %(default)s)")
+
+    parser.add_argument("--includeallelediff", type = str, default = 'No',
+        help = "whether to include columns for allele difference (default: %(default)s)")
 
     return parser.parse_args(args)
 
@@ -106,6 +129,27 @@ def allele_check(allele1, allele2, args):
     else:
         allele1 = allele1
         allele2 = allele2
+    return allele1, allele2
+
+def nan_allele_check(allele1, allele2):
+    """This is similar to allele_check except without the allelecutoff as a
+    factor.
+
+    Parameters:
+        allele1, allele2 (float): two alleles taken from an individual
+
+    Returns: allele1, allele2 (float): nan-replaced alleles"""
+
+    if (not np.isnan(allele1)) & np.isnan(allele2):
+            allele2 = allele1
+
+    elif np.isnan(allele1) & (not np.isnan(allele2)):
+            allele1 = allele2
+
+    else:
+        allele1 = allele1
+        allele2 = allele2
+
     return allele1, allele2
 
 def wiggle(allele, args):
@@ -228,6 +272,7 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     momalleledict["compallele"] = max(momalleledict['allele1'], momalleledict['allele2'])
     dadalleledict["compallele"] = max(dadalleledict['allele1'], dadalleledict['allele2'])
 
+    # here we have the standardized alleles for the full allele check
     kidalleledict['allele1_std'], kidalleledict['allele2_std'] = allele_check(
     kidalleledict['allele1'], kidalleledict['allele2'], args)
 
@@ -237,12 +282,25 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     dadalleledict['allele1_std'], dadalleledict['allele2_std'] = allele_check(
     dadalleledict['allele1'], dadalleledict['allele2'], args)
 
+    #here is  the nan_allele_check for the allelediff calculations
+    kidalleledict['allele1'], kidalleledict['allele2'] = nan_allele_check(
+    kidalleledict['allele1'], kidalleledict['allele2'])
+
+    momalleledict['allele1'], momalleledict['allele2'] = nan_allele_check(
+    momalleledict['allele1'], momalleledict['allele2'])
+
+    dadalleledict['allele1'], dadalleledict['allele2'] = nan_allele_check(
+    dadalleledict['allele1'], dadalleledict['allele2'])
+
     kidallele1_matches_mom = check_range(momalleledict['allele1_std'],
                     momalleledict['allele2_std'], kidalleledict['allele1_std'], args)
+
     kidallele1_matches_dad = check_range(dadalleledict['allele1_std'],
                     dadalleledict['allele2_std'], kidalleledict['allele1_std'], args)
+
     kidallele2_matches_mom = check_range(momalleledict['allele1_std'],
                     momalleledict['allele2_std'], kidalleledict['allele2_std'], args)
+
     kidallele2_matches_dad = check_range(dadalleledict['allele1_std'],
                     dadalleledict['allele2_std'], kidalleledict['allele2_std'], args)
 
@@ -314,7 +372,7 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
 
 
         else:
-            closeallele2 = closest(biglst, kidalleledict['allele1'])
+            closeallele2 = closest(biglst, kidalleledict['allele2'])
             if closeallele2 in lstmom:
                 allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
                 allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
@@ -432,6 +490,15 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         # drop any rows that didn't meet the depth filter
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
 
+        # we can include or remove the allelediff columns based on arguments
+        if args.includeallelediff == 'Yes':
+            pass
+        elif args.includeallelediff == 'No':
+            kiddadmom = kiddadmom.drop(columns = ['allele1diff', 'allele2diff'])
+        else:
+            raise ValueError('includeallelediff argument must be exact')
+
+
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
         writeHeader = False
@@ -481,3 +548,4 @@ def get_denovos(args):
 
 if __name__ == "__main__":
 	main()
+print("--- %s seconds ---" % (time.time() - start_time))
