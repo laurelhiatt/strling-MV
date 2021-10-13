@@ -4,7 +4,7 @@ Necessary python modules:
 argparse
 pandas
 numpy
-peddy (must be in python version 3.7 for peddy)
+peddy
 math
 
 
