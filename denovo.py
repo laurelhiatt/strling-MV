@@ -4,8 +4,6 @@ pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
 import peddy # must be in python version 3.7 for peddy to work
 import argparse
-import time
-start_time = time.time()
 
 def closest(lst, allele):
     """"This returns the closest value from a list to an input value (allele)
@@ -31,7 +29,7 @@ def allele_diff(lst, allele):
     Returns:
         (float): the difference between alleles"""
 
-    allelediff = abs(allele - (closest(lst, allele)))
+    allelediff = (allele - (closest(lst, allele)))
 
     return allelediff
 
@@ -266,7 +264,7 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
             np.isnan(momalleledict['allele1']) & np.isnan(momalleledict['allele2'])) or (
             np.isnan(dadalleledict['allele1']) & np.isnan(dadalleledict['allele2'])):
             if args.includeallelediff == 'Yes':
-                return 'Missing alleles, ignore', False, np.nan, np.nan
+                return 'Missing alleles, ignore', False, np.nan, np.nan, np.nan, np.nan
             else:
                 return 'Missing alleles, ignore', False
     # taking max allele to assess existence of amplification over threshold
@@ -284,6 +282,8 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     dadalleledict['allele1_std'], dadalleledict['allele2_std'] = allele_check(
     dadalleledict['allele1'], dadalleledict['allele2'], args)
 
+    percentdiff1 = np.nan
+    percentdiff2 = np.nan
     if args.includeallelediff == 'Yes':
     #here is  the nan_allele_check for the allelediff calculations
         kidalleledict['allele1'], kidalleledict['allele2'] = nan_allele_check(
@@ -321,7 +321,11 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
         if args.includeallelediff == 'Yes':
             allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
             allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
-            return 'Full match', False, allele1diff, allele2diff
+            if (kidalleledict['allele1'] - allele1diff) != 0:
+                percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+            if (kidalleledict['allele2'] - allele2diff) != 0:
+                percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+            return 'Full match', False, allele1diff, allele2diff, percentdiff1, percentdiff2
         else:
             return 'Full match', False
 
@@ -330,7 +334,11 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
         if args.includeallelediff == 'Yes':
             allele1diff = allele_diff(lstdad, kidalleledict['allele1'])
             allele2diff = allele_diff(lstmom, kidalleledict['allele2'])
-            return 'Full match', False, allele1diff, allele2diff
+            if (kidalleledict['allele1'] - allele1diff) != 0:
+                percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+            if (kidalleledict['allele2'] - allele2diff) != 0:
+                percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+            return 'Full match', False, allele1diff, allele2diff, percentdiff1, percentdiff2
         else:
             return 'Full match', False
 
@@ -348,7 +356,11 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
                     else:
                         allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
                         allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
-                    return 'Double MV, likely error', True, allele1diff, allele2diff
+                    if (kidalleledict['allele1'] - allele1diff) != 0:
+                        percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+                    if (kidalleledict['allele2'] - allele2diff) != 0:
+                        percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+                    return 'Double MV, likely error', True, allele1diff, allele2diff, percentdiff1, percentdiff2
                 else:
                     return 'Double MV, likely error', True
 
@@ -361,7 +373,11 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
                     else:
                         allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
                         allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
-                    return 'Double MV, likely error', False, allele1diff, allele2diff
+                    if (kidalleledict['allele1'] - allele1diff) != 0:
+                        percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+                    if (kidalleledict['allele2'] - allele2diff) != 0:
+                        percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+                    return 'Double MV, likely error', False, allele1diff, allele2diff, percentdiff1, percentdiff2
                 else:
                     return 'Double MV, likely error', False
 
@@ -374,7 +390,11 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
                 else:
                     allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
                     allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
-                return 'Double MV, likely error', False, allele1diff, allele2diff
+                if (kidalleledict['allele1'] - allele1diff) != 0:
+                    percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+                if (kidalleledict['allele2'] - allele2diff) != 0:
+                    percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+                return 'Double MV, likely error', False, allele1diff, allele2diff, percentdiff1, percentdiff2
             else:
                 return 'Double MV, likely error', False
         else:
@@ -391,10 +411,13 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
                 else:
                     allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
                     allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
-                return 'MV', True, allele1diff, allele2diff
+                if (kidalleledict['allele1'] - allele1diff) != 0:
+                    percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+                if (kidalleledict['allele2'] - allele2diff) != 0:
+                    percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+                return 'MV', True, allele1diff, allele2diff, percentdiff1, percentdiff2
             else:
                 return 'MV', True
-
 
         else:
             if args.includeallelediff == 'Yes':
@@ -405,7 +428,11 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
                 else:
                     allele2diff = allele_diff(lstdad, kidalleledict['allele2'])
                     allele1diff = allele_diff(lstmom, kidalleledict['allele1'])
-                return 'MV', False, allele1diff, allele2diff
+                if (kidalleledict['allele1'] - allele1diff) != 0:
+                    percentdiff1 = allele1diff/abs((kidalleledict['allele1'] - allele1diff))
+                if (kidalleledict['allele2'] - allele2diff) != 0:
+                    percentdiff2 = allele2diff/abs((kidalleledict['allele2'] - allele2diff))
+                return 'MV', False, allele1diff, allele2diff, percentdiff1, percentdiff2
             else:
                 return 'MV', False
 
@@ -502,7 +529,9 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         if ((row['depth_kid'] >= args.depth) & (row['depth_mom'
                     ] >= args.depth) & (row['depth_dad'] >= args.depth)):
             if args.includeallelediff == 'Yes':
-                row['mendelianstatus'], row['novel_amp'], row['allele1diff'], row['allele2diff'] = full_allele_check(momalleledict, dadalleledict, kidalleledict, args)
+                row['mendelianstatus'], row['novel_amp'], row['allele1diff'], row['allele2diff'], row['percentdiff1'], row['percentdiff2'] = full_allele_check(momalleledict, dadalleledict, kidalleledict, args)
+
+
             else:
                 row['mendelianstatus'], row['novel_amp'] = full_allele_check(
             momalleledict, dadalleledict, kidalleledict, args)
@@ -512,6 +541,8 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
                 row['novel_amp'] = 'under depth filter'
                 row['allele1diff'] = np.nan
                 row['allele2diff'] = np.nan
+                row['percentdiff1'] = np.nan
+                row['percentdiff2'] = np.nan
             else:
                 row['mendelianstatus'] = 'under depth filter'
                 row['novel_amp'] = 'under depth filter'
@@ -522,18 +553,10 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
         if args.includeallelediff == 'Yes':
             kiddadmom.at[index, 'allele1diff'] = row['allele1diff']
             kiddadmom.at[index, 'allele2diff'] = row['allele2diff']
-
+            kiddadmom.at[index, 'percentdiff1'] = row['percentdiff1']
+            kiddadmom.at[index, 'percentdiff2'] = row['percentdiff2']
         # drop any rows that didn't meet the depth filter
         kiddadmom = kiddadmom[kiddadmom.mendelianstatus != 'under depth filter']
-
-        # we can include or remove the allelediff columns based on arguments
-        #if args.includeallelediff == 'Yes':
-        #    pass
-        #elif args.includeallelediff == 'No':
-        #    kiddadmom = kiddadmom.drop(columns = ['allele1diff', 'allele2diff'])
-        #else:
-            #raise ValueError('includeallelediff argument must be exact')
-
 
     if writeHeader is True:
         kiddadmom.to_csv(args.out, mode='a', sep='\t', header=True, index=False)
@@ -584,4 +607,3 @@ def get_denovos(args):
 
 if __name__ == "__main__":
 	main()
-print("--- %s seconds ---" % (time.time() - start_time))
