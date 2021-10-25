@@ -2,7 +2,7 @@
 import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
 import numpy as np
-import peddy # must be in python version 3.7 for peddy to work
+import peddy
 import argparse
 
 def closest(lst, allele):
@@ -46,7 +46,7 @@ def get_args(args):
     parser.add_argument("--out", required = True,
         help = "output file name")
 
-    parser.add_argument("--wiggle", type = float or int, default = 0.1,
+    parser.add_argument("--wiggle", type = float or int, default = 0.25,
         help = "b/w 0 and 1, establishes range for alleles (default:%(default)s)")
 
     parser.add_argument("--minwig", type = float or int, default = 10.0,
