@@ -5,34 +5,6 @@ import numpy as np
 import peddy
 import argparse
 
-def closest(lst, allele):
-    """"This returns the closest value from a list to an input value (allele)
-
-    Parameters:
-        lst (list): a list of values, matching alleles of parent(s)
-        allele (float): a value, specifically an allele size
-
-    Returns:
-        (float) The value from the list closest to the input value"""
-
-    closeallele = lst[min(range(len(lst)), key = lambda i: abs(lst[i]-allele))]
-
-    return closeallele
-
-def allele_diff(lst, allele):
-    """"Taking the absolute difference from the closest value from a list
-
-    Parameters:
-        lst (list): a list of values
-        allele (float): a value
-
-    Returns:
-        (float): the difference between alleles"""
-
-    allelediff = (allele - (closest(lst, allele)))
-
-    return allelediff
-
 def get_args(args):
     """Incorporating argparse into the code for interchangeable arguments"""
     parser = argparse.ArgumentParser()
@@ -87,6 +59,34 @@ def has_parents(sample):
         return True
     return False
 
+def closest(lst, allele):
+    """"This returns the closest value from a list to an input value (allele)
+
+    Parameters:
+        lst (list): a list of values, matching alleles of parent(s)
+        allele (float): a value, specifically an allele size
+
+    Returns:
+        (float) The value from the list closest to the input value"""
+
+    closeallele = lst[min(range(len(lst)), key = lambda i: abs(lst[i]-allele))]
+
+    return closeallele
+
+def allele_diff(lst, allele):
+    """"Taking the absolute difference from the closest value from a list
+
+    Parameters:
+        lst (list): a list of values
+        allele (float): a value
+
+    Returns:
+        (float): the difference between alleles"""
+
+    allelediff = (allele - (closest(lst, allele)))
+
+    return allelediff
+    
 def allele_check(allele1, allele2, args):
     """The allele check ensures that an allele pair taken from a member of the
     trio are functional for analysis: a NaN allele will take the other allele's
