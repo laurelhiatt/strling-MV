@@ -86,7 +86,7 @@ def allele_diff(lst, allele):
     allelediff = (allele - (closest(lst, allele)))
 
     return allelediff
-    
+
 def allele_check(allele1, allele2, args):
     """The allele check ensures that an allele pair taken from a member of the
     trio are functional for analysis: a NaN allele will take the other allele's
@@ -127,9 +127,10 @@ def allele_check(allele1, allele2, args):
     else:
         allele1 = allele1
         allele2 = allele2
+
     return allele1, allele2
 
-def nan_allele_check(allele1, allele2):
+def nan_allele_check(allele1, allele2, ):
     """This is similar to allele_check except without the allelecutoff as a
     factor.
 
@@ -287,10 +288,10 @@ def full_allele_check(momalleledict, dadalleledict, kidalleledict, args):
     if args.includeallelediff == 'Yes':
     #here is  the nan_allele_check for the allelediff calculations
         kidalleledict['allele1'], kidalleledict['allele2'] = nan_allele_check(
-        kidalleledict['allele1'], kidalleledict['allele2'])
+        kidalleledict['allele1'], kidalleledict['allele2'], )
 
         momalleledict['allele1'], momalleledict['allele2'] = nan_allele_check(
-        momalleledict['allele1'], momalleledict['allele2'])
+        momalleledict['allele1'], momalleledict['allele2'], )
 
         dadalleledict['allele1'], dadalleledict['allele2'] = nan_allele_check(
         dadalleledict['allele1'], dadalleledict['allele2'])
@@ -474,20 +475,59 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
 
     # since we are comparing alleles from kid to parents,
     # using depth as a filter, we need to distinguish alleles in the final df
-    dfkid = dfkid.rename(columns={"allele1_est":"allele1kid",
-                        "allele2_est":"allele2kid", "depth": "depth_kid"})
-    dfdad = dfdad.rename(columns={"allele1_est":"allele1dad",
-                        "allele2_est":"allele2dad", "depth": "depth_dad"})
-    dfmom = dfmom.rename(columns={"allele1_est":"allele1mom",
-                        "allele2_est":"allele2mom","depth": "depth_mom"})
+    #dfkid = dfkid.rename(columns={"allele1_est":"allele1kid",
+    #                    "allele2_est":"allele2kid", "depth": "depth_kid"})
+    #dfdad = dfdad.rename(columns={"allele1_est":"allele1dad",
+    #                    "allele2_est":"allele2dad", "depth": "depth_dad"})
+    #dfmom = dfmom.rename(columns={"allele1_est":"allele1mom",
+    #                    "allele2_est":"allele2mom","depth": "depth_mom"})
+
+    dfkid = dfkid.rename(columns={"depth": "depth_kid", "allele1_est":"allele1estkid",
+                        "allele2_est":"allele2estkid"})
+    dfdad = dfdad.rename(columns={"depth": "depth_dad", "allele1_est":"allele1estdad",
+                        "allele2_est":"allele2estdad"})
+    dfmom = dfmom.rename(columns={"depth": "depth_mom", "allele1_est":"allele1estmom",
+                        "allele2_est":"allele2estmom"})
+
+#    for index, row in dfkid.iterrows():
+#        row['allele1kid'] = (row['allele1estkid'])*(int(len(row['repeatunit'])))
+#        row['allele2kid'] = (row['allele2estkid'])*(int(len(row['repeatunit'])))
+
+#    for index, row in dfdad.iterrows():
+#        row['allele1dad'] = (row['allele1estdad'])*(int(len(row['repeatunit'])))
+#        row['allele2dad'] = (row['allele2estdad'])*(int(len(row['repeatunit'])))
+
+#    for index, row in dfmom.iterrows():
+#        row['allele1mom'] = (row['allele1estmom'])*(int(len(row['repeatunit'])))
+#        row['allele2mom'] = (row['allele2estmom'])*(int(len(row['repeatunit'])))
+    for index, row in dfkid.iterrows():
+        row['repeatlen'] = len(row['repeatunit'])
+        dfkid.at[index, 'repeatlen'] = row['repeatlen']
 
 
-    drop_from_dkid= ['spanning_reads', 'spanning_pairs', 'left_clips',
+    for index, row in dfdad.iterrows():
+        row['repeatlen'] = len(row['repeatunit'])
+        dfdad.at[index, 'repeatlen'] = row['repeatlen']
+
+    for index, row in dfmom.iterrows():
+        row['repeatlen'] = len(row['repeatunit'])
+        dfmom.at[index, 'repeatlen'] = row['repeatlen']
+
+    #dfkid['allele1kid'] = dfkid.apply(lambda row: row.allele1estkid * row.repeatlen, axis=1)
+
+    dfkid['allele1kid'] = dfkid['allele1estkid'] * dfkid['repeatlen']
+    dfkid['allele2kid'] = dfkid['allele2estkid'] * dfkid['repeatlen']
+    dfdad['allele1dad'] = dfdad['allele1estdad'] * dfdad['repeatlen']
+    dfdad['allele2dad'] = dfdad['allele2estdad'] * dfdad['repeatlen']
+    dfmom['allele1mom'] = dfmom['allele1estmom'] * dfmom['repeatlen']
+    dfmom['allele2mom'] = dfmom['allele2estmom'] * dfmom['repeatlen']
+
+    drop_from_dkid = ['spanning_reads', 'spanning_pairs', 'left_clips',
                     'right_clips', 'unplaced_pairs', 'sum_str_counts',
-                    'sum_str_log', 'outlier']
+                    'sum_str_log', 'outlier', 'repeatlen', 'repeatunit']
     drop_from_parents = ['left', 'right', 'chrom', 'chrom_path', 'right_path',
-                        'left_path', 'disease', 'repeatunit_path', 'overlap',
-                        'sample', 'p', 'p_adj', 'repeatunit'] + drop_from_dkid
+                        'left_path', 'disease', '_path', 'overlap',
+                        'sample', 'p', 'p_adj', ''] + drop_from_dkid
     not_in_df = []
     for item in drop_from_parents:
         if item not in df.columns:
@@ -503,8 +543,10 @@ def strlingMV(df, kid, mom, dad, mutation, args, writeHeader = True):
     # we are dropping as many columns as we can for a clean output
     #while still getting essential information
 
-    kiddad = dfkid.merge(dfdad, on= 'locus')
-    kiddadmom = kiddad.merge(dfmom, on= 'locus')
+    kiddad = dfkid.merge(dfdad, on = 'locus')
+    kiddadmom = kiddad.merge(dfmom, on = 'locus')
+    kiddadmom = kiddadmom.drop('repeatlen_x', axis=1)
+    kiddadmom = kiddadmom.drop('repeatlen_y', axis=1)
 
     # we are going to iterate row by row to create dictionaries
     for index, row in kiddadmom.iterrows():
